@@ -142,3 +142,8 @@ When told to reformat commits, follow the Conventional Commits (https://www.conv
 
 ### Example Project Log
 - **2026-07-17**: Initialized project skeleton. Read `References/gameplay_brief.md` and `References/visual_guide.md`.
+
+# Project Log
+
+- **2026-07-17**: Built the preliminary playable browser prototype and full investigation loop in `index.html`, `styles.css`, `src/data.js`, and `src/game.js`; added launch documentation in `README.md` and a complete Playwright verification in `tests/browser_smoke.py` so the game can be played, maintained, and tested from character selection through accusation and ending.
+- **2026-07-17**: Reworked the visual presentation around the supplied reference art by adding generated painterly backgrounds in `assets/generated/`, cleaned character frames in `assets/characters/`, reproducible extraction in `scripts/prepare_character_assets.py`, and updated integration styles in `styles.css` and `index.html`; expanded `README.md` and browser QA captures so title, selection, gallery, viewer, and ending screens share one consistent museum world.
