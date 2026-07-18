@@ -16,6 +16,14 @@ Prompt: Create cinematic painterly title key art in the same world as the refere
 
 References: `References/Title.png` and `References/Gameplay.png`.
 
+## `start-cutscene.png`
+
+User-supplied painterly opening-cutscene background. The composition reserves its dark right side for the player-paced story text defined in `References/Cutscenes.md`.
+
+## `end-cutscene.png`
+
+User-supplied painterly ending-cutscene background. Its dark left side carries the result-specific story selected by the accusation strength and archive decision.
+
 ## `archive-viewer.png`
 
 Created with the built-in `imagegen` tool on 2026-07-17.

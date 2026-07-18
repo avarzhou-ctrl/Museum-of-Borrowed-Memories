@@ -75,7 +75,7 @@ The player selects the culprit, method, location, and motive.
 
 # Investigation Phases
 
-## Phase 1: The Pretty Museum
+## Phase 1: The Quiet Gallery
 
 The player begins with access to three exhibits:
 
@@ -92,7 +92,7 @@ The player learns that:
 
 The museum still appears mostly beautiful and harmless.
 
-## Phase 2: The Museum Starts Remembering Back
+## Phase 2: Echoes in the Collection
 
 The player unlocks:
 
@@ -117,7 +117,7 @@ The player discovers that:
 
 The museum begins changing labels, hiding details, and reacting to the investigation.
 
-## Phase 3: The Glass Orchard
+## Phase 3: The Glass Orchard Opens
 
 After enough clues and contradictions have been found, the Glass Orchard becomes available.
 

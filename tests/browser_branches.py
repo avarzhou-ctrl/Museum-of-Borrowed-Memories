@@ -77,6 +77,14 @@ def choose_accusation(page, correct=True):
     page.get_by_role("button", name="Confirm Accusation").click()
 
 
+def finish_cutscene(page):
+    for _ in range(12):
+        if page.locator(".cutscene-screen").count() == 0:
+            return
+        page.locator("[data-cutscene-next]").click()
+    raise AssertionError("Cutscene did not finish within its expected slide count")
+
+
 def observe_all(page):
     for tool in ("Eye", "Hand", "Magnifier"):
         page.get_by_role("button", name=f"Use {tool}").click()
@@ -118,12 +126,66 @@ def main():
         assert page.locator("#memory-count").inner_text() == "0 / 7"
         page.close()
 
+        # Top-level save fields are allow-listed and bounded before any UI uses them.
+        corrupt = {
+            "started": True, "character": "intruder", "completed": ["raincoat", "fake", "raincoat"],
+            "clues": ["returned-in-storm", "fake"], "contradictions": ["mara-spoke", "fake"],
+            "timeline": {"11:10 PM": "argument", "not-a-time": "guests", "11:24 PM": "argument"},
+            "settings": {"volume": 900, "textSpeed": "warp", "muted": "yes", "largeText": 1},
+            "seen": {"clues": -8, "people": 900, "memories": "bad", "timeline": 3.8},
+            "player": {"x": "outside", "y": 400}, "ending": "secret-sixth-ending",
+        }
+        writer = context.new_page()
+        writer.goto(BASE_URL)
+        writer.evaluate("([key, value]) => localStorage.setItem(key, JSON.stringify(value))", [SAVE_KEY, corrupt])
+        inspector = context.new_page()
+        inspector.goto(BASE_URL)
+        migrated = inspector.evaluate("key => JSON.parse(localStorage.getItem(key))", SAVE_KEY)
+        assert migrated["started"] is False and migrated["character"] is None, migrated
+        assert migrated["completed"] == ["raincoat"] and migrated["clues"] == ["returned-in-storm"]
+        assert migrated["contradictions"] == ["mara-spoke"]
+        assert migrated["timeline"] == {"11:10 PM": "argument"}
+        assert migrated["settings"] == {"reducedMotion": False, "largeText": True, "muted": True, "volume": 100, "textSpeed": "calm"}
+        assert migrated["seen"] == {"clues": 0, "people": 4, "memories": 0, "timeline": 3}
+        assert migrated["player"] == {"x": 50, "y": 78} and migrated["ending"] is None
+        inspector.close()
+
+        # Phase 1 keeps the case tools and perspective switch sealed; Phase 2 opens both.
+        page = seed(context, errors, ["raincoat"])
+        enter_saved_case(page)
+        page.get_by_role("button", name="Open case board").click()
+        assert page.get_by_text("The board is still asleep.").is_visible()
+        page.get_by_role("button", name="Close panel").click()
+        page.locator('[data-exhibit="raincoat"]').evaluate("el => el.click()")
+        page.get_by_role("button", name="Review restored memory").click()
+        assert page.get_by_role("tab", name="Object Memory").count() == 0
+        page.get_by_role("button", name="Close panel").click()
+        page.close()
+        page = seed(context, errors, ["raincoat", "teacup", "umbrella"])
+        enter_saved_case(page)
+        page.get_by_role("button", name="Open case board").click()
+        assert page.locator(".contradiction-board").is_visible()
+        page.get_by_role("button", name="Close panel").click()
+        page.locator('[data-exhibit="raincoat"]').evaluate("el => el.click()")
+        page.get_by_role("button", name="Review restored memory").click()
+        assert page.get_by_role("tab", name="Object Memory").count() == 1
+        page.get_by_role("button", name="Close panel").click()
+        page.close()
+
         # Saves made before footprint collisions must not reopen inside a display case.
         page = seed(context, errors, [], player={"x": 35.23, "y": 60})
         enter_saved_case(page)
         recovered = page.locator("#player").evaluate("el => ({ x: parseFloat(el.style.getPropertyValue('--player-x')), y: parseFloat(el.style.getPropertyValue('--player-y')) })")
         assert page.evaluate("point => window.MUSEUM_COLLISION_API.isWalkablePoint(point)", recovered), recovered
         assert page.evaluate("key => JSON.parse(localStorage.getItem(key)).player", SAVE_KEY) == recovered
+        page.close()
+
+        # Painted cases receive a restrained proximity glow in addition to the prompt.
+        page = seed(context, errors, [], player={"x": 18, "y": 83})
+        enter_saved_case(page)
+        page.locator('[data-exhibit="raincoat"].is-near').wait_for()
+        assert float(page.locator('[data-exhibit="raincoat"] .case-glow').evaluate("el => getComputedStyle(el).opacity")) > 0.5
+        assert page.locator("#interaction-prompt").is_visible()
         page.close()
 
         # The feet anchor can reach the bottom of the gallery without leaving the screen.
@@ -177,10 +239,48 @@ def main():
         assert page.locator("#museum-screen").get_attribute("data-phase") == "3"
         assert page.locator("#memory-count").inner_text() == "5 / 7"
 
-        # Dragging remains available in addition to the keyboard/click placement path.
+        # A wrong placement remains movable and can be corrected; dragging also remains available.
         page.get_by_role("button", name="Open case board").click()
+        page.locator('[data-event-card="argument"]').click()
+        page.locator('[data-time-slot="10:55 PM"]').click()
+        assert "is-wrong" in (page.locator('[data-time-slot="10:55 PM"]').get_attribute("class") or "")
+        page.locator('[data-time-slot="10:55 PM"]').click()
+        page.locator('[data-time-slot="11:10 PM"]').click()
+        assert "is-correct" in (page.locator('[data-time-slot="11:10 PM"]').get_attribute("class") or "")
+        page.locator('[data-time-slot="11:10 PM"]').click()
         page.locator('[data-event-card="argument"]').drag_to(page.locator('[data-time-slot="11:10 PM"]'))
         assert "is-correct" in (page.locator('[data-time-slot="11:10 PM"]').get_attribute("class") or "")
+        page.get_by_role("button", name="Close panel").click()
+
+        # Every valid contradiction triple succeeds, while mismatched triples remain rejected.
+        page.close()
+        page = seed(context, errors, five_ordinary)
+        enter_saved_case(page)
+        page.get_by_role("button", name="Open case board").click()
+        invalid_triples = [
+            ("mara-spoke", "raincoat", "mara-argument"),
+            ("celeste-left", "raincoat", "planted-umbrella"),
+            ("jonah-saw", "teacup", "archive-fingerprint"),
+        ]
+        for statement, memory, evidence in invalid_triples:
+            page.locator("#statement-select").select_option(statement)
+            page.locator("#memory-select").select_option(memory)
+            page.locator("#evidence-select").select_option(evidence)
+            page.get_by_role("button", name="Pin three-part connection").click()
+            assert "thread slips loose" in page.locator("#board-feedback").inner_text().lower()
+        valid_triples = [
+            ("mara-spoke", "teacup", "mara-argument"),
+            ("mara-entered", "elevator", "archive-fingerprint"),
+            ("celeste-left", "raincoat", "returned-in-storm"),
+            ("museum-umbrella", "umbrella", "planted-umbrella"),
+            ("jonah-saw", "elevator", "archive-fingerprint"),
+        ]
+        for statement, memory, evidence in valid_triples:
+            page.locator("#statement-select").select_option(statement)
+            page.locator("#memory-select").select_option(memory)
+            page.locator("#evidence-select").select_option(evidence)
+            page.get_by_role("button", name="Pin three-part connection").click()
+        assert page.locator(".connection").count() == 5
         page.get_by_role("button", name="Close panel").click()
 
         # Wrong deductions and fragment orders fail forward; partial work survives reload.
@@ -214,15 +314,13 @@ def main():
         page.locator('[data-fragment-slot="0"]').drag_to(page.locator('[data-fragment-slot="1"]'))
         page.locator('[data-memory-fragment="returns"]').drag_to(page.locator('[data-fragment-slot="0"]'))
         page.get_by_role("button", name="Restore memory").click()
-        page.get_by_role("button", name="Continue to Human Recollection").click()
-        page.get_by_role("button", name="Continue to Restored Truth").click()
         page.get_by_role("button", name="Record restored clue").click()
         page.get_by_role("button", name="Return to gallery").click()
         assert page.evaluate("key => JSON.parse(localStorage.getItem(key)).clues.filter(id => id === 'returned-in-storm').length", SAVE_KEY) == 1
         page.locator('[data-exhibit="raincoat"]').evaluate("el => el.click()")
         page.get_by_text("Restored exhibit", exact=True).wait_for()
         page.get_by_role("button", name="Review restored memory").click()
-        assert page.get_by_role("tab", name="Restored Truth").get_attribute("aria-selected") == "true"
+        assert page.get_by_role("tab", name="Restored Truth").count() == 0
         page.get_by_role("button", name="Close panel").click()
         assert page.evaluate("key => JSON.parse(localStorage.getItem(key)).clues.filter(id => id === 'returned-in-storm').length", SAVE_KEY) == 1
 
@@ -276,8 +374,14 @@ def main():
             enter_saved_case(page)
             choose_accusation(page)
             page.locator(f'[data-ending="{ending_id}"]').click()
+            assert page.locator(".cutscene-panel h2").inner_text() == title
+            assert "end-cutscene.png" in page.locator(".cutscene-ending").evaluate("el => getComputedStyle(el).backgroundImage")
+            if ending_id == "return":
+                assert not page.locator("[data-cutscene-skip]").is_visible()
+                page.locator("[data-cutscene-skip]").wait_for(state="visible", timeout=4000)
+            finish_cutscene(page)
             page.get_by_role("heading", name=title).wait_for()
-            assert page.locator(".ending-investigator").get_attribute("src").endswith("female/portrait.png")
+            assert "/female/portrait.png" in page.locator(".ending-investigator").get_attribute("src")
             assert "assets/" in page.locator(".ending-screen").evaluate("el => el.style.getPropertyValue('--ending-image')")
 
         # A correct but under-supported accusation gives the weaker ending.
@@ -285,6 +389,8 @@ def main():
         page = seed(context, errors, ["raincoat", "teacup", "umbrella", "elevator"])
         enter_saved_case(page)
         choose_accusation(page)
+        assert page.locator(".cutscene-panel h2").inner_text() == "A Beautiful Lie"
+        finish_cutscene(page)
         page.get_by_role("heading", name="A Beautiful Lie").wait_for()
 
         # A wrong accusation gives the collection ending and names the chosen auditor.
@@ -292,9 +398,11 @@ def main():
         page = seed(context, errors, ["raincoat", "teacup", "umbrella", "elevator"], character="male")
         enter_saved_case(page)
         choose_accusation(page, correct=False)
+        assert page.locator(".cutscene-panel h2").inner_text() == "The Visitor Who Almost Remembered"
+        finish_cutscene(page)
         page.get_by_role("heading", name="The Visitor Who Almost Remembered").wait_for()
         assert page.locator(".museum-label strong").inner_text() == "Silas Hart"
-        assert page.locator(".ending-investigator").get_attribute("src").endswith("male/portrait.png")
+        assert "/male/portrait.png" in page.locator(".ending-investigator").get_attribute("src")
 
         # Settings and timeline state survive a reload and settings affect the document.
         page.close()
@@ -309,12 +417,21 @@ def main():
         assert "reduced-motion" in page.locator("body").get_attribute("class")
         assert "large-text" in page.locator("body").get_attribute("class")
         assert page.locator("body").get_attribute("data-text-speed") == "instant"
+        page.get_by_role("button", name="Open menu").click()
+        mute = page.get_by_role("button", name="Mute all sound")
+        assert mute.get_attribute("aria-pressed") == "false"
+        assert page.locator("#volume-output").inner_text() == "0%"
+        mute.click()
+        assert page.evaluate("key => JSON.parse(localStorage.getItem(key)).settings.muted", SAVE_KEY) is True
+        page.get_by_role("button", name="Close panel").click()
         page.get_by_role("button", name="Open journal").click()
         assert page.get_by_role("tab").all_inner_texts() == ["Clues", "People", "Memories", "Timeline"]
         assert page.locator("#notes-area").count() == 0
         page.get_by_role("tab", name="People").click()
         page.screenshot(path="/tmp/museum-journal-people.png", full_page=True)
         page.get_by_role("tab", name="Timeline").click()
+        assert page.locator(".journal-timeline-card").count() == 1
+        assert page.locator('.journal-timeline-card[data-journal-event="argument"]').count() == 1
         aligned_card = page.locator(".journal-timeline-card.is-aligned")
         assert aligned_card.locator(".clue-meta").count() == 0
         assert "rgb(111, 139, 102)" not in aligned_card.evaluate("el => getComputedStyle(el).boxShadow")
@@ -327,6 +444,10 @@ def main():
         page.wait_for_function("document.querySelector('.artifact-hero')?.complete && document.querySelector('.artifact-hero').naturalWidth > 0")
         assert page.locator(".artifact-hero").evaluate("img => img.complete && img.naturalWidth > 0")
         assert page.locator(".investigation-tools").count() == 0
+        page.locator(".artifact-hero").evaluate("img => { img.src = 'assets/does-not-exist.png'; }")
+        page.locator(".asset-fallback").wait_for()
+        assert "has-asset-fallback" in page.locator("body").get_attribute("class")
+        assert page.get_by_role("button", name="Close panel").is_visible()
 
         assert not errors, errors
         browser.close()

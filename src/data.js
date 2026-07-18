@@ -1,4 +1,7 @@
 /* The mystery lives here so presentation and progression do not duplicate narrative rules. */
+const CHARACTER_ASSET_VERSION = "20260718-release6";
+const characterAsset = (character, file) => `assets/characters/final/${character}/${file}.png?v=${CHARACTER_ASSET_VERSION}`;
+
 window.GAME_DATA = {
   exhibits: {
     raincoat: {
@@ -291,26 +294,28 @@ window.GAME_DATA = {
   },
   characterAnimations: {
     female: {
-      idleFront: "assets/characters/female/idle-front.png",
-      idleBack: "assets/characters/female/idle-back.png",
-      idleSide: "assets/characters/female/idle-side.png",
-      walkFront: ["assets/characters/female/walk-front-1.png", "assets/characters/female/walk-front-2.png"],
-      walkBack: ["assets/characters/female/walk-back-1.png", "assets/characters/female/walk-back-2.png"],
-      walkSide: ["assets/characters/female/walk-side-1.png", "assets/characters/female/walk-side-2.png"],
-      interactFront: ["assets/characters/female/interact-front-1.png", "assets/characters/female/interact-front-2.png"],
-      interactBack: ["assets/characters/female/interact-back-1.png", "assets/characters/female/interact-back-2.png"],
-      interactSide: ["assets/characters/female/interact-side-1.png", "assets/characters/female/interact-side-2.png"]
+      portrait: characterAsset("female", "portrait"),
+      idleFront: [1, 2].map((frame) => characterAsset("female", `idle-front-${frame}`)),
+      idleBack: [1, 2].map((frame) => characterAsset("female", `idle-back-${frame}`)),
+      idleSide: [1, 2].map((frame) => characterAsset("female", `idle-side-${frame}`)),
+      walkFront: [1, 2, 3, 4].map((frame) => characterAsset("female", `walk-front-${frame}`)),
+      walkBack: [1, 2, 3, 4].map((frame) => characterAsset("female", `walk-back-${frame}`)),
+      walkSide: [1, 2, 3, 4].map((frame) => characterAsset("female", `walk-side-${frame}`)),
+      interactFront: [1, 2, 3].map((frame) => characterAsset("female", `interact-front-${frame}`)),
+      interactBack: [1, 2, 3].map((frame) => characterAsset("female", `interact-back-${frame}`)),
+      interactSide: [1, 2, 3].map((frame) => characterAsset("female", `interact-side-${frame}`))
     },
     male: {
-      idleFront: "assets/characters/male/idle-front.png",
-      idleBack: "assets/characters/male/idle-back.png",
-      idleSide: "assets/characters/male/idle-side.png",
-      walkFront: ["assets/characters/male/walk-front-1.png", "assets/characters/male/walk-front-2.png"],
-      walkBack: ["assets/characters/male/walk-back-1.png", "assets/characters/male/walk-back-2.png"],
-      walkSide: ["assets/characters/male/walk-side-1.png", "assets/characters/male/walk-side-2.png"],
-      interactFront: ["assets/characters/male/interact-front-1.png", "assets/characters/male/interact-front-2.png"],
-      interactBack: ["assets/characters/male/interact-back-1.png", "assets/characters/male/interact-back-2.png"],
-      interactSide: ["assets/characters/male/interact-side-1.png", "assets/characters/male/interact-side-2.png"]
+      portrait: characterAsset("male", "portrait"),
+      idleFront: [1, 2].map((frame) => characterAsset("male", `idle-front-${frame}`)),
+      idleBack: [1, 2].map((frame) => characterAsset("male", `idle-back-${frame}`)),
+      idleSide: [1, 2].map((frame) => characterAsset("male", `idle-side-${frame}`)),
+      walkFront: [1, 2, 3, 4].map((frame) => characterAsset("male", `walk-front-${frame}`)),
+      walkBack: [1, 2, 3, 4].map((frame) => characterAsset("male", `walk-back-${frame}`)),
+      walkSide: [1, 2, 3, 4].map((frame) => characterAsset("male", `walk-side-${frame}`)),
+      interactFront: [1, 2, 3].map((frame) => characterAsset("male", `interact-front-${frame}`)),
+      interactBack: [1, 2, 3].map((frame) => characterAsset("male", `interact-back-${frame}`)),
+      interactSide: [1, 2, 3].map((frame) => characterAsset("male", `interact-side-${frame}`))
     }
   },
   timeline: [

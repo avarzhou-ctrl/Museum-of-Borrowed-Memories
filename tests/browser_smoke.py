@@ -1,11 +1,13 @@
 """Full browser smoke test for the Observe → Connect → Restore investigation loop."""
 
 from pathlib import Path
+from PIL import Image
 from playwright.sync_api import sync_playwright
 
 
 BASE_URL = "http://127.0.0.1:4173"
 SHOT = Path("/tmp/museum-complete.png")
+ROOT = Path(__file__).resolve().parents[1]
 
 
 INVESTIGATIONS = {
@@ -19,7 +21,15 @@ INVESTIGATIONS = {
 }
 
 
-def restore_memory(page, exhibit, check_perspectives=False):
+def finish_cutscene(page):
+    for _ in range(12):
+        if page.locator(".cutscene-screen").count() == 0:
+            return
+        page.locator("[data-cutscene-next]").click()
+    raise AssertionError("Cutscene did not finish within its expected slide count")
+
+
+def restore_memory(page, exhibit, check_perspectives=False, expected_phase=None):
     print(f"Restoring {exhibit}...", flush=True)
     target = page.locator(f'[data-exhibit="{exhibit}"]')
     target.evaluate("el => el.click()")
@@ -65,22 +75,41 @@ def restore_memory(page, exhibit, check_perspectives=False):
         page.screenshot(path="/tmp/museum-restore.png", full_page=True)
     page.get_by_role("button", name="Restore memory").click()
 
-    assert page.get_by_role("tab", name="Object Memory").get_attribute("aria-selected") == "true"
     assert page.locator(".investigation-tools").count() == 0
-    page.get_by_role("button", name="Continue to Human Recollection").click()
-    assert page.get_by_role("tab", name="Human Recollection").get_attribute("aria-selected") == "true"
-    if check_perspectives:
-        page.screenshot(path="/tmp/museum-memory-perspective.png", full_page=True)
-    page.get_by_role("button", name="Continue to Restored Truth").click()
-    assert page.get_by_role("tab", name="Restored Truth").get_attribute("aria-selected") == "true"
+    if page.get_by_role("tab", name="Object Memory").count():
+        assert page.get_by_role("tab", name="Object Memory").get_attribute("aria-selected") == "true"
+        page.get_by_role("button", name="Continue to Human Recollection").click()
+        assert page.get_by_role("tab", name="Human Recollection").get_attribute("aria-selected") == "true"
+        if check_perspectives:
+            page.screenshot(path="/tmp/museum-memory-perspective.png", full_page=True)
+        page.get_by_role("button", name="Continue to Restored Truth").click()
+        assert page.get_by_role("tab", name="Restored Truth").get_attribute("aria-selected") == "true"
+    else:
+        assert page.get_by_text("Restore all three opening exhibits to unlock object and human perspective switching.").is_visible()
     page.wait_for_function("document.querySelector('[data-claim-clue]') && !document.querySelector('[data-claim-clue]').disabled")
     if exhibit == "raincoat":
         page.screenshot(path="/tmp/museum-truth.png", full_page=True)
     page.get_by_role("button", name="Record restored clue").click()
+    if expected_phase:
+        number, name = expected_phase
+        phase_card = page.locator(".phase-card")
+        phase_card.wait_for(state="visible")
+        assert phase_card.get_by_text(f"Phase {number}", exact=True).is_visible()
+        assert phase_card.get_by_role("heading", name=name).is_visible()
+        phase_card.wait_for(state="detached", timeout=6000)
     page.get_by_role("button", name="Return to gallery").click()
 
 
 def main():
+    assert (ROOT / "assets" / "audio" / "backing-track.mp3").stat().st_size > 3_000_000
+    for character in ("female", "male"):
+        frames = (ROOT / "assets" / "characters" / "final" / character).glob("*.png")
+        heights = set()
+        for path in frames:
+            bbox = Image.open(path).convert("RGBA").getchannel("A").getbbox()
+            heights.add(bbox[3] - bbox[1])
+        assert heights == {240}, (character, heights)
+
     with sync_playwright() as runner:
         browser = runner.chromium.launch(headless=True)
         page = browser.new_page(viewport={"width": 1440, "height": 900})
@@ -96,15 +125,43 @@ def main():
         page.evaluate("localStorage.clear(); sessionStorage.clear()")
         page.reload()
 
+        page.wait_for_function("window.MUSEUM_AUDIO_API?.status().musicPlaying", timeout=10000)
+        title_audio = page.evaluate("window.MUSEUM_AUDIO_API.status()")
+        assert title_audio["musicPlaying"] and title_audio["musicContinuous"], title_audio
+        assert title_audio["cueLevel"] > title_audio["musicLevel"], title_audio
         page.get_by_role("button", name="Enter the Museum").click()
+        page.wait_for_function("window.MUSEUM_AUDIO_API?.status().unlocked")
+        page.wait_for_function("window.MUSEUM_AUDIO_API?.status().musicPlaying", timeout=10000)
+        audio = page.evaluate("window.MUSEUM_AUDIO_API.status()")
+        assert audio["supported"] and audio["ambienceNodeCount"] == 7, audio
+        assert audio["musicPlaying"] and audio["musicLooping"] and audio["musicDuration"] > 150, audio
+        assert audio["musicContinuous"] and audio["cueLevel"] > audio["musicLevel"], audio
+        assert abs(audio["effectiveLevel"] - 1) < .001, audio
+        assert "start-cutscene.png" in page.locator(".cutscene-start").evaluate("el => getComputedStyle(el).backgroundImage")
+        assert page.locator(".cutscene-start .eyebrow, .cutscene-start h2, .cutscene-progress").count() == 0
+        assert page.get_by_role("button", name="Next scene").inner_text() == ">"
+        assert page.get_by_role("button", name="Next scene").evaluate("el => getComputedStyle(el).borderRadius") == "50%"
+        assert page.locator(".cutscene-copy").evaluate("el => getComputedStyle(el).animationName") == "cutscene-copy-rise"
+        page.get_by_role("button", name="Next scene").click()
+        page.wait_for_function("document.querySelector('.cutscene-copy')?.classList.contains('is-visible')")
+        assert page.locator(".cutscene-copy").evaluate("el => getComputedStyle(el).animationName") == "cutscene-copy-rise"
+        assert page.locator("[data-cutscene-skip]").get_attribute("class").endswith("is-hidden")
+        finish_cutscene(page)
         page.screenshot(path="/tmp/museum-selection.png", full_page=True)
         assert page.locator('[data-character="female"] strong').inner_text() == "Elara Finch"
         assert page.locator('[data-character="male"] strong').inner_text() == "Silas Hart"
         assert page.locator(".character-card > span").count() == 2
+        assert "/assets/characters/final/female/portrait.png" in page.locator(".investigator-female.is-preview").evaluate("el => getComputedStyle(el).backgroundImage")
+        assert "/assets/characters/final/male/portrait.png" in page.locator(".investigator-male.is-preview").evaluate("el => getComputedStyle(el).backgroundImage")
         assert page.locator("#select-title").evaluate("el => getComputedStyle(el).fontFamily") == page.locator("html").evaluate("el => getComputedStyle(el).getPropertyValue('--display').trim()")
         assert page.locator("#start-button").evaluate("el => getComputedStyle(el).fontFamily") == page.locator("html").evaluate("el => getComputedStyle(el).getPropertyValue('--sans').trim()")
         page.locator('[data-character="female"]').click()
         page.get_by_role("button", name="Begin Audit").click()
+        phase_card = page.locator(".phase-card")
+        phase_card.wait_for(state="visible")
+        assert phase_card.get_by_text("Phase I", exact=True).is_visible()
+        assert phase_card.get_by_role("heading", name="The Quiet Gallery").is_visible()
+        phase_card.wait_for(state="detached", timeout=6000)
         assert page.locator(".briefing-content").evaluate("el => getComputedStyle(el).paddingTop") == "0px"
         assert page.locator(".briefing-content").evaluate("el => getComputedStyle(el).marginTop") == "0px"
         assert page.locator(".briefing-content > .eyebrow").evaluate("el => [getComputedStyle(el).paddingTop, getComputedStyle(el).paddingBottom]") == ["10.4px", "0px"]
@@ -112,10 +169,11 @@ def main():
         page.get_by_role("button", name="Begin investigation").click()
         page.screenshot(path="/tmp/museum-gallery.png", full_page=True)
         assert page.locator("#gallery.painted-gallery").is_visible()
-        assert page.locator("#player").evaluate("el => getComputedStyle(el).width") == "100px"
-        assert page.locator("#player-sprite").evaluate("el => getComputedStyle(el).height") == "158px"
-        assert page.locator("#player-sprite").evaluate("el => getComputedStyle(el).backgroundPositionY") == "calc(100% + 7px)"
-        assert page.locator(".hud-actions .icon-button").all_inner_texts() == ["Clues", "Journal", "Map", "Menu"]
+        assert page.locator("#player").evaluate("el => getComputedStyle(el).width") == "150px"
+        assert page.locator("#player-sprite").evaluate("el => getComputedStyle(el).height") == "237px"
+        assert page.locator("#player-sprite").evaluate("el => getComputedStyle(el).backgroundPositionY") == "100%"
+        assert "/assets/characters/final/female/idle-front-" in page.locator("#player-sprite").evaluate("el => getComputedStyle(el).backgroundImage")
+        assert page.locator(".hud-actions .icon-button").all_inner_texts() == ["Clues", "Journal", "Menu"]
         assert page.locator('[data-panel="journal"]').get_attribute("data-notification") == "false"
         assert page.locator('[data-panel="case"]').get_attribute("data-notification") == "false"
         assert "menu.png" in page.locator(".hud-icon-menu").evaluate("el => getComputedStyle(el).backgroundImage")
@@ -203,13 +261,13 @@ def main():
         page.keyboard.up("ArrowUp")
         page.wait_for_timeout(50)
         assert page.locator("#player").get_attribute("data-direction") == "back"
-        assert "idle-back.png" in page.locator("#player-sprite").evaluate("el => getComputedStyle(el).backgroundImage")
+        assert "idle-back-" in page.locator("#player-sprite").evaluate("el => getComputedStyle(el).backgroundImage")
         page.keyboard.down("ArrowRight")
         page.wait_for_timeout(120)
         page.keyboard.up("ArrowRight")
         page.wait_for_timeout(50)
         assert page.locator("#player").get_attribute("data-direction") == "side"
-        assert "idle-side.png" in page.locator("#player-sprite").evaluate("el => getComputedStyle(el).backgroundImage")
+        assert "idle-side-" in page.locator("#player-sprite").evaluate("el => getComputedStyle(el).backgroundImage")
         page.keyboard.down("ArrowLeft")
         page.wait_for_timeout(120)
         page.keyboard.up("ArrowLeft")
@@ -218,10 +276,10 @@ def main():
         page.keyboard.down("ArrowDown")
         page.wait_for_timeout(120)
         page.keyboard.up("ArrowDown")
-        page.wait_for_function("getComputedStyle(document.querySelector('#player-sprite')).backgroundImage.includes('idle-front.png')")
+        page.wait_for_function("getComputedStyle(document.querySelector('#player-sprite')).backgroundImage.includes('idle-front-')")
         assert page.locator("#player").get_attribute("data-direction") == "front"
         front_idle_image = page.locator("#player-sprite").evaluate("el => getComputedStyle(el).backgroundImage")
-        assert "idle-front.png" in front_idle_image, front_idle_image
+        assert "idle-front-" in front_idle_image, front_idle_image
         page.keyboard.down("ArrowUp")
         page.wait_for_timeout(1000)
         page.keyboard.up("ArrowUp")
@@ -238,7 +296,10 @@ def main():
         restore_memory(page, "raincoat", check_perspectives=True)
 
         assert page.locator('[data-panel="journal"]').get_attribute("data-notification") == "true"
-        assert page.locator('[data-panel="case"]').get_attribute("data-notification") == "true"
+        assert page.locator('[data-panel="case"]').get_attribute("data-notification") == "false"
+        page.get_by_role("button", name="Open case board").click()
+        assert page.get_by_text("The board is still asleep.").is_visible()
+        page.get_by_role("button", name="Close panel").click()
         page.get_by_role("button", name="Open journal").click()
         assert page.locator('[data-journal-tab="clues"]').get_attribute("data-notification") == "false"
         assert page.locator('[data-journal-tab="memories"]').get_attribute("data-notification") == "true"
@@ -271,31 +332,28 @@ def main():
         assert replay_contrast >= 4.5, replay_contrast
         assert "auditor-journal.png" in page.locator(".journal-paper").evaluate("el => getComputedStyle(el).backgroundImage")
         page.get_by_role("tab", name="Timeline").click()
-        assert page.locator(".journal-timeline-card").count() == 7
-        assert page.locator(".journal-timeline-card.is-unlocked").count() == 1
+        assert page.locator(".journal-timeline-card").count() == 0
+        assert page.locator(".journal-timeline-empty").is_visible()
+        assert page.get_by_text("Place an event on the Timeline Board to begin the recovered sequence.").is_visible()
         assert "auditor-journal.png" not in page.locator(".journal-paper.is-timeline").evaluate("el => getComputedStyle(el).backgroundImage")
         assert "The night of the preview" not in page.locator(".journal-timeline-section").inner_text()
-        assert page.locator(".journal-timeline-card.is-locked .clue-meta").first.evaluate("el => getComputedStyle(el).color") == "rgb(216, 198, 208)"
         assert page.locator(".timeline-alignment").inner_text() == "0 / 7 ALIGNED"
-        assert page.locator(".journal-timeline-card").nth(0).evaluate("el => getComputedStyle(el).gridRowStart") == "1"
-        assert page.locator(".journal-timeline-card").nth(1).evaluate("el => getComputedStyle(el).gridRowStart") == "3"
-        assert page.locator(".journal-timeline-card").nth(0).evaluate("el => getComputedStyle(el).gridColumnStart") == "1"
-        assert page.locator(".journal-timeline-card").nth(1).evaluate("el => getComputedStyle(el).gridColumnStart") == "2"
-        assert page.locator(".journal-timeline-card").nth(0).locator("time").evaluate("el => getComputedStyle(el).bottom") == "-76px"
-        assert page.locator(".journal-timeline-card").nth(1).locator("time").evaluate("el => getComputedStyle(el).top") == "-76px"
-        assert page.locator(".journal-timeline").evaluate("el => el.scrollWidth > el.clientWidth")
-        page.locator(".journal-timeline").evaluate("el => { el.scrollLeft = 300; }")
-        assert page.locator(".journal-timeline").evaluate("el => el.scrollLeft > 0")
         assert page.locator('[data-panel="journal"]').get_attribute("data-notification") == "false"
         page.get_by_role("tab", name="Memories").click()
         page.get_by_role("button", name="Replay").click()
-        assert page.get_by_role("tab", name="Restored Truth").get_attribute("aria-selected") == "true"
+        assert page.get_by_role("tab", name="Restored Truth").count() == 0
+        assert page.get_by_text("This memory is stable. Restore the three opening memories to compare perspectives.").is_visible()
         assert page.locator(".investigation-tools").count() == 0
-        page.get_by_role("tab", name="Human Recollection").click()
         page.get_by_role("button", name="Close panel").click()
 
         restore_memory(page, "teacup")
-        restore_memory(page, "umbrella")
+        restore_memory(page, "umbrella", expected_phase=("II", "Echoes in the Collection"))
+        assert page.locator("#museum-screen").get_attribute("data-phase") == "2"
+        page.locator('[data-exhibit="raincoat"]').evaluate("el => el.click()")
+        page.get_by_role("button", name="Review restored memory").click()
+        assert page.get_by_role("tab", name="Object Memory").count() == 1
+        assert page.get_by_role("tab", name="Human Recollection").count() == 1
+        page.get_by_role("button", name="Close panel").click()
         restore_memory(page, "elevator")
         restore_memory(page, "musicbox")
         restore_memory(page, "guestbook")
@@ -312,6 +370,12 @@ def main():
             page.locator("#memory-select").select_option(memory)
             page.locator("#evidence-select").select_option(evidence)
             page.get_by_role("button", name="Pin three-part connection").click()
+            if statement == "celeste-left":
+                phase_card = page.locator(".phase-card")
+                phase_card.wait_for(state="visible")
+                assert phase_card.get_by_text("Phase III", exact=True).is_visible()
+                assert phase_card.get_by_role("heading", name="The Glass Orchard Opens").is_visible()
+                phase_card.wait_for(state="detached", timeout=6000)
         page.screenshot(path="/tmp/museum-case-board.png", full_page=True)
         assert page.locator(".evidence-node").count() == 9
         assert "case-board.png" in page.locator(".case-board").evaluate("el => getComputedStyle(el).backgroundImage")
@@ -329,6 +393,7 @@ def main():
         first_clue = page.locator(".artifact-clue-grid .clue-card").first
         clue_box = first_clue.bounding_box()
         related_box = first_clue.locator(":scope > .clue-meta").last.bounding_box()
+        assert first_clue.evaluate("el => [getComputedStyle(el).width, getComputedStyle(el).height]") == ["310px", "430px"]
         assert clue_box["y"] + clue_box["height"] - (related_box["y"] + related_box["height"]) >= 48
         page.set_viewport_size({"width": 1440, "height": 900})
         page.get_by_role("button", name="Close panel").click()
@@ -359,6 +424,9 @@ def main():
             page.locator(f'[data-accusation="{field}"]').select_option(answer)
         page.get_by_role("button", name="Confirm accusation").click()
         page.locator('[data-ending="return"]').click()
+        assert "end-cutscene.png" in page.locator(".cutscene-ending").evaluate("el => getComputedStyle(el).backgroundImage")
+        assert page.locator(".cutscene-panel h2").inner_text() == "Return What Was Taken"
+        finish_cutscene(page)
         page.get_by_role("heading", name="Return What Was Taken").wait_for()
         page.screenshot(path=str(SHOT), full_page=True)
 
@@ -368,10 +436,12 @@ def main():
 
         page.get_by_role("button", name="Begin another investigation").click()
         page.get_by_role("button", name="Enter the Museum").click()
+        finish_cutscene(page)
         page.locator('[data-character="male"]').click()
         page.get_by_role("button", name="Begin Audit").click()
         page.get_by_role("button", name="Begin investigation").click()
         assert page.locator("#player-sprite.investigator-male").is_visible()
+        assert page.locator("#player-sprite").evaluate("el => getComputedStyle(el).backgroundPositionY") == "100%"
         browser.close()
         print("PASS: full investigation reached an ending and both investigators launch")
 

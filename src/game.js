@@ -15,7 +15,7 @@
     timeline: {},
     investigations: {},
     seen: { clues: 0, people: 0, memories: 0, timeline: 0 },
-    settings: { reducedMotion: false, largeText: false, volume: 45, textSpeed: "calm" },
+    settings: { reducedMotion: false, largeText: false, muted: false, volume: 100, textSpeed: "calm" },
     player: { x: 50, y: 78 },
     ending: null
   };
@@ -29,6 +29,89 @@
     raincoat: "SHE CAME BACK", teacup: "WE HEARD THEM", umbrella: "PLACED, NOT LOST",
     elevator: "THE THIRTEENTH WAY", musicbox: "THE ARCHIVE HUMS", guestbook: "EVERY GIFT WAS KEPT",
     orchard: "ONE LIFE PRESERVES MANY"
+  };
+  const PHASES = {
+    1: "The Quiet Gallery",
+    2: "Echoes in the Collection",
+    3: "The Glass Orchard Opens"
+  };
+  const ENDING_IDS = new Set(["return", "break", "remember", "beautiful-lie", "visitor"]);
+  const MUSIC_LEVEL = .32;
+  const CUE_LEVEL = .44;
+  const CUTSCENES = {
+    start: {
+      title: "The Museum Remembers",
+      slides: [
+        "The Museum was built to preserve what people could not bear to lose.",
+        "At first, it kept only treasured things:<br><br>a mother’s voice,<br>a lover’s final letter,<br>the feeling of home.",
+        "Over time, it began preserving what they wanted to forget:<br><br>Some were taken from grief.<br>Some from guilt.<br>Some from people who begged to forget.",
+        "The Museum kept them all.",
+        "Tonight, curator <strong>Elian Voss</strong> has vanished.<br><br>The doors are sealed.<br>The exhibits are awake.",
+        "And somewhere beneath the gallery,<br>the truth is still remembering.",
+        "<strong>You are the Museum’s newest Memory Auditor.</strong><br><br>Find what happened to Elian.",
+        "But be careful.<br><br>The only witnesses are the exhibits.<br><br>And memories are rarely honest."
+      ]
+    },
+    remember: {
+      title: "The Curator Remembered",
+      slides: [
+        "The Glass Orchard opened like a wound.",
+        "Inside, Elian Voss was still waiting.<br><br>Not asleep.<br>Not dead.<br>Only scattered across a thousand borrowed memories.",
+        "One by one, the fragments returned to him.<br><br>His name.<br>His voice.<br>The reason he had tried to expose the Museum.",
+        "Mara did not run.<br><br>She stood beneath the falling light and watched the collection begin to empty.",
+        "<q>You think you saved them,</q> she said.<br><q>Perhaps you only taught them how much they had lost.</q>",
+        "By morning, Elian walked out of the archive.<br><br>The Museum remained behind him.<br><br>Silent.<br><br>Listening.",
+        "<strong>The curator was remembered.</strong><br><br><strong>The Museum would not forget.</strong>"
+      ]
+    },
+    return: {
+      title: "Return What Was Taken",
+      slides: [
+        "The archive doors opened.<br><br>And the memories began to leave.",
+        "They returned to their owners as dreams, voices, and sudden pain.<br><br>A forgotten face at breakfast.<br>A grief returning without warning.<br>A love that had never truly disappeared.",
+        "Some people wept.<br><br>Some laughed.<br><br>Some wished the Museum had kept what it stole.",
+        "The galleries grew quiet.<br><br>The glass cases remained, but the warmth inside them was gone.",
+        "Nothing was destroyed.<br><br>Nothing was forgiven.",
+        "The Museum survived.<br><br>Empty enough to be harmless.<br><br>Beautiful enough to be mourned.",
+        "<strong>What was taken was returned.</strong><br><br><strong>Whether it was wanted no longer mattered.</strong>"
+      ]
+    },
+    break: {
+      title: "Burn the Orchard",
+      slides: [
+        "The first flame made no sound.",
+        "Then every memory began speaking at once.<br><br>Promises.<br>Confessions.<br>Last words.<br>Names no living person still remembered.",
+        "The Glass Orchard cracked from root to branch.<br><br>Its fruit burst into light.",
+        "Mara reached toward it.<br><br>Elian pulled her back.",
+        "Some memories escaped.<br><br>Others vanished before they could find their way home.",
+        "By dawn, nothing remained beneath the dome but ash and molten glass.<br><br>The Museum could never steal again.",
+        "Neither could it preserve what the world was about to lose.",
+        "<strong>The archive was destroyed.</strong><br><br><strong>Some truths were freed.</strong><br><br><strong>Others were gone forever.</strong>"
+      ]
+    },
+    "beautiful-lie": {
+      title: "A Beautiful Lie",
+      slides: [
+        "The accusation was accepted.<br><br>Not because it was true.<br><br>Because it was useful.",
+        "The Museum rewrote its labels before sunrise.<br><br>Elian Voss became a tragic accident.<br>Mara Vale became a grieving colleague.<br>The missing memories became a temporary exhibition error.",
+        "The guests returned the following evening.<br><br>They admired the glass.<br>They praised the lighting.<br>They never noticed the new exhibit in the archive.",
+        "Behind the walls, something continued to whisper.",
+        "The Museum had survived many truths.<br><br>It preferred this one.",
+        "<strong>The case was closed.</strong><br><br><strong>The lie was beautifully preserved.</strong>"
+      ]
+    },
+    visitor: {
+      title: "The Visitor Who Almost Remembered",
+      slides: [
+        "The Museum listened to your accusation.<br><br>Then the lights went out.",
+        "When they returned, the gallery was empty.<br><br>No suspects.<br>No journal.<br>No way back to the entrance.",
+        "A new glass case stood beneath the chandelier.<br><br>Inside was an object you recognized.<br><br>Though you could no longer remember why.",
+        "A brass plaque appeared beneath it.<br><br>Your name was written there.",
+        "Visitors would later say the exhibit felt strangely familiar.<br><br>Some even claimed it watched them leave.",
+        "The Museum recorded no disappearance.<br><br>Only a new acquisition.",
+        "<strong>You almost remembered the truth.</strong><br><br><strong>Now the Museum remembers you.</strong>"
+      ]
+    }
   };
 
   const $ = (selector, root = document) => root.querySelector(selector);
@@ -49,10 +132,20 @@
   let selectedCharacter = null;
   let selectedTimelineEvent = null;
   let audioContext = null;
+  let masterGain = null;
+  let ambienceNodes = [];
+  let musicGain = null;
+  let musicSource = null;
+  let musicLoadPromise = null;
+  let audioUnlocked = false;
   let interactionTimeout = null;
   let textTimer = null;
   let investigationHintTimeout = null;
   let selectedMemoryFragment = null;
+  let activeCutscene = null;
+  let cutsceneSkipTimeout = null;
+  let activePhaseCard = null;
+  let phaseCardTimeout = null;
   const testModeEnabled = new URLSearchParams(window.location.search).has("testMode");
   let collisionDebugEnabled = new URLSearchParams(window.location.search).has("collisionDebug");
 
@@ -60,13 +153,13 @@
     try {
       const saved = JSON.parse(localStorage.getItem(SAVE_KEY));
       if (!saved) return structuredClone(DEFAULT_STATE);
-      const migrated = {
+      const migrated = sanitizeTopLevelState({
         ...structuredClone(DEFAULT_STATE), ...saved,
         settings: { ...DEFAULT_STATE.settings, ...(saved.settings || {}) },
         seen: { ...DEFAULT_STATE.seen, ...(saved.seen || {}) },
         player: { ...DEFAULT_STATE.player, ...(saved.player || {}) },
         investigations: {}
-      };
+      });
       Object.keys(DATA.exhibits).forEach((id) => {
         const progress = sanitizeInvestigationProgress(id, saved.investigations?.[id]);
         if (progress) migrated.investigations[id] = progress;
@@ -76,6 +169,58 @@
     } catch {
       return structuredClone(DEFAULT_STATE);
     }
+  }
+
+  function uniqueKnown(values, allowed) {
+    return [...new Set(Array.isArray(values) ? values : [])].filter((value) => allowed.has(value));
+  }
+
+  function sanitizeTopLevelState(value) {
+    const exhibitIds = new Set(Object.keys(DATA.exhibits));
+    const clueIds = new Set([...Object.values(DATA.exhibits).map((item) => item.clue.id), ...(DATA.caseClues || []).map((item) => item.id)]);
+    const contradictionIds = new Set(DATA.contradictions.map((item) => item.id));
+    const eventIds = new Set(DATA.timeline.map((item) => item.id));
+    const timelineTimes = new Set(DATA.timeline.map((item) => item.time));
+    const completed = uniqueKnown(value.completed, exhibitIds);
+    const timeline = {};
+    const usedEvents = new Set();
+    if (value.timeline && typeof value.timeline === "object" && !Array.isArray(value.timeline)) {
+      Object.entries(value.timeline).forEach(([time, eventId]) => {
+        if (timelineTimes.has(time) && eventIds.has(eventId) && !usedEvents.has(eventId)) {
+          timeline[time] = eventId;
+          usedEvents.add(eventId);
+        }
+      });
+    }
+    const settings = {
+      reducedMotion: Boolean(value.settings?.reducedMotion),
+      largeText: Boolean(value.settings?.largeText),
+      muted: Boolean(value.settings?.muted),
+      volume: Math.max(0, Math.min(100, Number.isFinite(Number(value.settings?.volume)) ? Number(value.settings.volume) : DEFAULT_STATE.settings.volume)),
+      textSpeed: ["calm", "quick", "instant"].includes(value.settings?.textSpeed) ? value.settings.textSpeed : DEFAULT_STATE.settings.textSpeed
+    };
+    const playerX = Number(value.player?.x);
+    const playerY = Number(value.player?.y);
+    const playerState = Number.isFinite(playerX) && Number.isFinite(playerY) && playerX >= 0 && playerX <= 100 && playerY >= 0 && playerY <= 100
+      ? { x: playerX, y: playerY } : { ...DEFAULT_STATE.player };
+    const counts = { clues: clueIds.size, people: DATA.suspects.length, memories: exhibitIds.size, timeline: eventIds.size };
+    const seen = Object.fromEntries(Object.entries(counts).map(([key, max]) => {
+      const count = Math.floor(Number(value.seen?.[key]));
+      return [key, Number.isFinite(count) ? Math.max(0, Math.min(max, count)) : 0];
+    }));
+    return {
+      ...value,
+      started: Boolean(value.started) && ["female", "male"].includes(value.character),
+      character: ["female", "male"].includes(value.character) ? value.character : null,
+      completed,
+      clues: uniqueKnown(value.clues, clueIds),
+      contradictions: uniqueKnown(value.contradictions, contradictionIds),
+      timeline,
+      settings,
+      player: playerState,
+      seen,
+      ending: ENDING_IDS.has(value.ending) ? value.ending : null
+    };
   }
 
   function sanitizeInvestigationProgress(id, value) {
@@ -152,6 +297,7 @@
   }
 
   function caseActionsAvailable() {
+    if (!phase2Unlocked()) return false;
     const timelineAction = DATA.timeline.some((event) => hasCompleted(EVENT_EXHIBIT[event.id]) && state.timeline[event.time] !== event.id);
     const contradictionAction = DATA.contradictions.some((item) => !state.contradictions.includes(item.id) && hasCompleted(item.memoryExhibit) && hasClue(item.evidence));
     return timelineAction || contradictionAction;
@@ -235,7 +381,9 @@
   function applySettings() {
     document.body.classList.toggle("reduced-motion", state.settings.reducedMotion);
     document.body.classList.toggle("large-text", state.settings.largeText);
+    document.body.classList.toggle("audio-muted", state.settings.muted);
     document.body.dataset.textSpeed = state.settings.textSpeed;
+    updateAudioLevel();
   }
 
   function toast(title, message = "") {
@@ -244,23 +392,118 @@
     item.className = "toast";
     item.innerHTML = `<strong>${title}</strong>${message ? `<span>${message}</span>` : ""}`;
     region.append(item);
+    while (region.children.length > 3) region.firstElementChild.remove();
     window.setTimeout(() => item.remove(), state.settings.reducedMotion ? 1800 : 3600);
   }
 
-  function playTone(frequency = 440, duration = .09) {
-    if (state.settings.volume <= 0) return;
+  function ensureAudio() {
+    if (audioUnlocked && audioContext) {
+      if (audioContext.state === "suspended") audioContext.resume?.().then(updateAudioLevel).catch?.(() => {});
+      return audioContext;
+    }
     try {
-      audioContext ||= new AudioContext();
+      const AudioConstructor = window.AudioContext || window.webkitAudioContext;
+      if (!AudioConstructor) return null;
+      audioContext ||= new AudioConstructor();
+      masterGain ||= audioContext.createGain();
+      masterGain.connect(audioContext.destination);
+      audioUnlocked = true;
+      updateAudioLevel();
+      startGalleryAmbience();
+      startBackingTrack();
+      audioContext.resume?.().then(updateAudioLevel).catch?.(() => {});
+      return audioContext;
+    } catch { return null; }
+  }
+
+  function updateAudioLevel() {
+    if (!masterGain || !audioContext) return;
+    const target = state.settings.muted ? 0 : state.settings.volume / 100;
+    masterGain.gain.cancelScheduledValues(audioContext.currentTime);
+    masterGain.gain.setTargetAtTime(target, audioContext.currentTime, .025);
+  }
+
+  function startGalleryAmbience() {
+    if (!audioContext || !masterGain || ambienceNodes.length) return;
+    const bus = audioContext.createGain();
+    bus.gain.value = .07;
+    bus.connect(masterGain);
+    [73.42, 110, 146.83].forEach((frequency, index) => {
       const oscillator = audioContext.createOscillator();
-      const gain = audioContext.createGain();
-      oscillator.type = "sine";
+      oscillator.type = index === 1 ? "triangle" : "sine";
       oscillator.frequency.value = frequency;
-      gain.gain.value = (state.settings.volume / 100) * .07;
-      oscillator.connect(gain).connect(audioContext.destination);
-      gain.gain.exponentialRampToValueAtTime(.0001, audioContext.currentTime + duration);
+      const tone = audioContext.createBiquadFilter();
+      tone.type = "lowpass";
+      tone.frequency.value = 420 + index * 110;
+      oscillator.connect(tone).connect(bus);
       oscillator.start();
-      oscillator.stop(audioContext.currentTime + duration);
-    } catch { /* The game remains fully playable without Web Audio. */ }
+      ambienceNodes.push(oscillator, tone);
+    });
+    ambienceNodes.push(bus);
+  }
+
+  function startBackingTrack() {
+    if (!audioContext || !masterGain || musicSource) return musicLoadPromise;
+    if (musicLoadPromise) return musicLoadPromise;
+    musicLoadPromise = fetch("assets/audio/backing-track.mp3")
+      .then((response) => {
+        if (!response.ok) throw new Error(`Backing track request failed: ${response.status}`);
+        return response.arrayBuffer();
+      })
+      .then((bytes) => audioContext.decodeAudioData(bytes))
+      .then((buffer) => {
+        if (musicSource) return musicSource;
+        musicGain = audioContext.createGain();
+        musicGain.gain.value = MUSIC_LEVEL;
+        musicGain.connect(masterGain);
+        const source = audioContext.createBufferSource();
+        source.buffer = buffer;
+        source.loop = true;
+        source.connect(musicGain);
+        source.start();
+        musicSource = source;
+        return source;
+      })
+      .catch(() => {
+        document.body.dataset.audioStatus = "Backing track unavailable; action sounds remain active";
+        return null;
+      });
+    return musicLoadPromise;
+  }
+
+  function playCue(name = "inspect") {
+    if (state.settings.muted || state.settings.volume <= 0) return;
+    const context = ensureAudio();
+    if (!context || !masterGain) return;
+    if (state.settings.reducedMotion && name === "transition") return;
+    const cues = {
+      inspect: [[330, .07], [440, .08]], observe: [[430, .06], [510, .08]],
+      error: [[190, .12], [145, .15]], restore: [[392, .12], [523.25, .16], [659.25, .24]],
+      timeline: [[523.25, .08], [659.25, .11]], contradiction: [[293.66, .1], [440, .12], [698.46, .2]],
+      transition: [[246.94, .06], [329.63, .1]], phase: [[220, .14], [329.63, .18], [493.88, .28]],
+      endingGood: [[261.63, .16], [392, .2], [523.25, .42]], endingDark: [[196, .2], [146.83, .45]]
+    };
+    const notes = cues[name] || cues.inspect;
+    let offset = 0;
+    notes.forEach(([frequency, duration], index) => {
+      const oscillator = context.createOscillator();
+      const gain = context.createGain();
+      oscillator.type = name === "error" || name === "endingDark" ? "sawtooth" : index % 2 ? "triangle" : "sine";
+      oscillator.frequency.value = frequency;
+      gain.gain.setValueAtTime(.0001, context.currentTime + offset);
+      gain.gain.exponentialRampToValueAtTime(CUE_LEVEL, context.currentTime + offset + .012);
+      gain.gain.exponentialRampToValueAtTime(.0001, context.currentTime + offset + duration);
+      oscillator.connect(gain).connect(masterGain);
+      oscillator.start(context.currentTime + offset);
+      oscillator.stop(context.currentTime + offset + duration + .02);
+      offset += duration * .62;
+    });
+  }
+
+  function playTone(frequency = 440, duration = .09) {
+    if (frequency < 220) playCue("error");
+    else if (duration >= .2) playCue("restore");
+    else playCue("inspect");
   }
 
   function createParticles() {
@@ -279,8 +522,71 @@
     }
   }
 
-  function updateMuseum() {
-    const phase2JustUnlocked = ordinaryCompleteCount() === 3 && !sessionStorage.getItem("phase2-noticed");
+  function projectAssetUrls() {
+    const urls = new Set([
+      "assets/generated/title-gallery.png", "assets/generated/main-gallery.png", "assets/generated/archive-viewer.png",
+      "assets/generated/start-cutscene.png", "assets/generated/end-cutscene.png",
+      "assets/ui/menu.png", "assets/ui/journal.png", "assets/ui/clues.png", "assets/ui/map.png", "assets/ui/inspect-prompt.png",
+      ...INSPECTION_TOOLS.map(([, path]) => path)
+    ]);
+    Object.values(DATA.exhibits).forEach((item) => { urls.add(item.artifactImage); urls.add(item.memoryImage); });
+    DATA.suspects.forEach((item) => urls.add(item.image));
+    Object.values(DATA.characterAnimations).forEach((animation) => {
+      Object.values(animation).flat().forEach((path) => urls.add(path));
+    });
+    return [...urls];
+  }
+
+  const preloadedImages = new Map();
+
+  function preloadAsset(url) {
+    if (preloadedImages.has(url)) return preloadedImages.get(url).ready;
+    const image = new Image();
+    const ready = new Promise((resolve) => {
+      image.addEventListener("load", () => {
+        const decoded = image.decode ? image.decode() : Promise.resolve();
+        decoded.catch(() => {}).finally(resolve);
+      }, { once: true });
+      image.addEventListener("error", () => {
+        document.body.classList.add("has-asset-fallback");
+        document.body.dataset.assetStatus = "Some artwork unavailable; illustrated fallbacks active";
+        resolve();
+      }, { once: true });
+    });
+    image.decoding = "sync";
+    image.src = url;
+    preloadedImages.set(url, { image, ready });
+    return ready;
+  }
+
+  function preloadAssets() {
+    projectAssetUrls().forEach((url) => {
+      preloadAsset(url);
+    });
+  }
+
+  function preloadCharacterAssets(character) {
+    return Promise.all(Object.values(DATA.characterAnimations[character]).flat().map(preloadAsset));
+  }
+
+  function installAssetFallbacks() {
+    document.addEventListener("error", (event) => {
+      const image = event.target;
+      if (!(image instanceof HTMLImageElement) || image.dataset.fallbackApplied) return;
+      image.dataset.fallbackApplied = "true";
+      image.classList.add("asset-missing");
+      image.alt ||= "Artwork unavailable";
+      const fallback = document.createElement("span");
+      fallback.className = "asset-fallback";
+      fallback.setAttribute("role", "img");
+      fallback.setAttribute("aria-label", image.alt);
+      fallback.textContent = "◇";
+      image.insertAdjacentElement("afterend", fallback);
+      document.body.classList.add("has-asset-fallback");
+    }, true);
+  }
+
+  function updateMuseum(announcePhase = false) {
     const museumPhase = orchardUnlocked() || hasCompleted("orchard") ? 3 : phase2Unlocked() ? 2 : 1;
     museumScreen.dataset.phase = String(museumPhase);
     syncCaseClues();
@@ -308,10 +614,37 @@
     $("#objective").textContent = currentObjective();
     updateNotificationBadges();
     updatePlayerVisual();
-    if (phase2JustUnlocked) {
-      sessionStorage.setItem("phase2-noticed", "true");
-      toast("The museum shifts", "Three more cases have opened. The labels are watching you.");
+    if (announcePhase && !sessionStorage.getItem(`phase-${museumPhase}-noticed`)) {
+      showPhaseCard(museumPhase, () => {
+        if (museumPhase === 2) toast("Phase 2 unlocked", "The Case Board, suspect portraits, memory perspectives, and three more exhibits are now available.");
+        if (museumPhase === 3) toast("Phase 3 unlocked", "The Glass Orchard is awake in the center of the gallery.");
+      });
     }
+  }
+
+  function showPhaseCard(number, onComplete = null) {
+    const name = PHASES[number];
+    if (!name) { onComplete?.(); return; }
+    const noticedKey = `phase-${number}-noticed`;
+    if (sessionStorage.getItem(noticedKey)) { onComplete?.(); return; }
+    sessionStorage.setItem(noticedKey, "true");
+    keys.clear();
+    activePhaseCard?.remove();
+    window.clearTimeout(phaseCardTimeout);
+    const card = document.createElement("section");
+    card.className = "phase-card";
+    card.setAttribute("role", "status");
+    card.setAttribute("aria-live", "assertive");
+    card.innerHTML = `<div><p>Phase ${["", "I", "II", "III"][number]}</p><h2>${name}</h2></div>`;
+    document.body.append(card);
+    activePhaseCard = card;
+    playCue("phase");
+    phaseCardTimeout = window.setTimeout(() => {
+      if (activePhaseCard !== card) return;
+      activePhaseCard = null;
+      card.remove();
+      onComplete?.();
+    }, state.settings.reducedMotion ? 3900 : 4900);
   }
 
   function currentObjective() {
@@ -340,9 +673,9 @@
     if (sprite.dataset.assetsFor !== character) {
       const frames = DATA.characterAnimations[character];
       const setFrame = (name, path) => sprite.style.setProperty(name, `url("${path}")`);
-      setFrame("--idle-front", frames.idleFront); setFrame("--idle-side", frames.idleSide); setFrame("--idle-back", frames.idleBack);
       ["front", "side", "back"].forEach((direction) => {
         const title = direction[0].toUpperCase() + direction.slice(1);
+        frames[`idle${title}`].forEach((path, index) => setFrame(`--idle-${direction}-${index + 1}`, path));
         frames[`walk${title}`].forEach((path, index) => setFrame(`--walk-${direction}-${index + 1}`, path));
         frames[`interact${title}`].forEach((path, index) => setFrame(`--interact-${direction}-${index + 1}`, path));
       });
@@ -507,6 +840,7 @@
     modal?.setAttribute("role", "dialog");
     modal?.setAttribute("aria-modal", "true");
     requestAnimationFrame(() => $("button, select, input, textarea, [tabindex]", modalRoot)?.focus());
+    playCue("transition");
   }
 
   function closeModal() {
@@ -631,6 +965,12 @@
 
   function renderTruthStep(id, progress) {
     const exhibit = DATA.exhibits[id];
+    if (!phase2Unlocked()) {
+      return `<div class="truth-layout phase-one-truth">
+        <div class="restore-memory is-stable" style="--memory-image:url(&quot;${exhibit.memoryImage}&quot;)" role="img" aria-label="Restored memory held by ${exhibit.shortTitle}"><div class="memory-lens" aria-hidden="true"></div></div>
+        <div class="truth-copy"><p class="eyebrow">Step 3 · Restore</p><h3>Restored memory</h3><p class="phase-lock-note">Restore all three opening exhibits to unlock object and human perspective switching.</p><blockquote data-truth-copy>${exhibit.perspectives.restored}</blockquote><button class="button button-primary" data-truth-action data-claim-clue disabled>Record restored clue</button></div>
+      </div>`;
+    }
     const perspectives = [["object", "Object Memory"], ["human", "Human Recollection"], ["restored", "Restored Truth"]];
     const activeIndex = perspectives.findIndex(([key]) => key === progress.perspective);
     const next = perspectives[activeIndex + 1];
@@ -666,7 +1006,7 @@
     body.innerHTML = `${investigationStepsMarkup(id, progress)}${content}`;
     bindInvestigationControls(id, activeTool);
     const truthCopy = $("[data-truth-copy]", body);
-    if (truthCopy) renderPacedText(truthCopy, DATA.exhibits[id].perspectives[progress.perspective], () => {
+    if (truthCopy) renderPacedText(truthCopy, phase2Unlocked() ? DATA.exhibits[id].perspectives[progress.perspective] : DATA.exhibits[id].perspectives.restored, () => {
       const action = $("[data-truth-action]", body);
       if (action) action.disabled = false;
     });
@@ -749,7 +1089,10 @@
       const correct = DATA.exhibits[id].investigation.fragments.map((item) => item.id);
       const mismatch = progress.fragments.findIndex((item, index) => item !== correct[index]);
       if (mismatch < 0) {
-        progress.step = "truth"; progress.perspective = "object"; progress.truthUnlocked = 0; saveState(); playTone(680, .22); renderInvestigationBody(id);
+        progress.step = "truth";
+        progress.perspective = phase2Unlocked() ? "object" : "restored";
+        progress.truthUnlocked = phase2Unlocked() ? 0 : 2;
+        saveState(); playCue("restore"); renderInvestigationBody(id);
       } else {
         playTone(150, .15);
         const hint = mismatch === 0 ? "The opening fragment must establish who acts first." : `Fragment ${mismatch + 1} cannot follow the event before it.`;
@@ -785,6 +1128,7 @@
     keys.clear();
     player.classList.remove("is-moving");
     player.classList.add("is-interacting");
+    playCue("inspect");
     window.clearTimeout(interactionTimeout);
     interactionTimeout = window.setTimeout(() => {
       player.classList.remove("is-interacting");
@@ -831,11 +1175,13 @@
       ["human", "Human Recollection"],
       ["restored", "Restored Truth"]
     ];
+    const switchingAvailable = phase2Unlocked();
+    if (!switchingAvailable) initialPerspective = "restored";
     openModal(`<section class="modal memory-modal" aria-labelledby="memory-title">
-      ${modalHeader(`${exhibit.shortTitle} remembers`, "Memory restored · all perspectives available")}
-      <div class="perspective-switch" role="tablist" aria-label="Memory perspective">${perspectives.map(([key, label]) => `<button role="tab" data-memory-perspective="${key}" aria-selected="${initialPerspective === key}" tabindex="${initialPerspective === key ? 0 : -1}">${label}</button>`).join("")}</div>
+      ${modalHeader(`${exhibit.shortTitle} remembers`, switchingAvailable ? "Memory restored · all perspectives available" : "Memory restored · perspectives unlock after the third opening memory")}
+      ${switchingAvailable ? `<div class="perspective-switch" role="tablist" aria-label="Memory perspective">${perspectives.map(([key, label]) => `<button role="tab" data-memory-perspective="${key}" aria-selected="${initialPerspective === key}" tabindex="${initialPerspective === key ? 0 : -1}">${label}</button>`).join("")}</div>` : ""}
       <div class="memory-scene"><div class="memory-visual" data-memory-visual data-perspective-view="${initialPerspective}" style="--memory-image: url(&quot;${exhibit.memoryImage}&quot;)"><div class="memory-lens" aria-hidden="true"></div></div>
-      <div class="memory-text"><p class="eyebrow" data-perspective-label>Object Memory</p><blockquote id="memory-title" data-perspective-copy>${exhibit.memory}</blockquote><div class="restored-note"><span>✦</span> This memory is stable. Switch perspectives to compare testimony with the object's record.</div></div></div>
+      <div class="memory-text"><p class="eyebrow" data-perspective-label>Restored Truth</p><blockquote id="memory-title" data-perspective-copy>${exhibit.memory}</blockquote><div class="restored-note"><span>✦</span> ${switchingAvailable ? "This memory is stable. Switch perspectives to compare testimony with the object's record." : "This memory is stable. Restore the three opening memories to compare perspectives."}</div></div></div>
     </section>`);
     setMemoryPerspective(id, initialPerspective);
     $$('[data-memory-perspective]', modalRoot).forEach((button) => button.addEventListener("click", () => setMemoryPerspective(id, button.dataset.memoryPerspective)));
@@ -852,9 +1198,9 @@
       progress.perspective = "restored";
       progress.truthUnlocked = 2;
       saveState();
-      updateMuseum();
+      updateMuseum(true);
     }
-    playTone(720, .28);
+    playCue("restore");
     openModal(`<section class="modal memory-modal" aria-labelledby="clue-title">
       ${modalHeader("Memory restored", `${exhibit.shortTitle} is quiet now`)}
       <div class="memory-text"><p class="eyebrow">Clue acquired</p><div class="clue-reveal"><img class="clue-artifact" src="${exhibit.artifactImage}" alt=""><div><h2 id="clue-title">${exhibit.clue.title}</h2><p>${exhibit.clue.text}</p><span class="clue-meta">${exhibit.shortTitle} · ${exhibit.clue.time}</span></div></div>
@@ -890,18 +1236,21 @@
       const memories = Object.entries(DATA.exhibits).filter(([id]) => hasCompleted(id));
       return memories.length ? `<div class="clue-grid">${memories.map(([id, item]) => `<article class="clue-card memory-card"><img class="clue-card-art" src="${item.memoryImage}" alt=""><span class="clue-meta">Restored memory</span><h3>${item.shortTitle}</h3><p>${item.memory}</p><button class="puzzle-button" data-replay="${id}">Replay</button></article>`).join("")}</div>` : `<div class="empty-state">The pages wait for an object to remember.</div>`;
     }
-    const placedEvents = Object.values(state.timeline);
+    const placedEvents = DATA.timeline.flatMap((slot) => {
+      const eventId = state.timeline[slot.time];
+      const event = DATA.timeline.find((item) => item.id === eventId);
+      return event ? [{ ...event, placedTime: slot.time }] : [];
+    });
     return `<section class="journal-timeline-section" aria-labelledby="journal-timeline-title"><header><h3 id="journal-timeline-title">Recovered sequence</h3><span class="timeline-alignment">${correctTimelineCount()} / 7 aligned</span></header>
-      <div class="journal-timeline" tabindex="0" aria-label="Horizontally scrolling recovered timeline"><div class="journal-timeline-track">
-        ${DATA.timeline.map((event, index) => {
+      ${placedEvents.length ? `<div class="journal-timeline" tabindex="0" aria-label="Horizontally scrolling recovered timeline"><div class="journal-timeline-track" style="--timeline-count:${placedEvents.length}">
+        ${placedEvents.map((event, index) => {
           const exhibit = DATA.exhibits[EVENT_EXHIBIT[event.id]];
           const unlocked = hasCompleted(EVENT_EXHIBIT[event.id]);
-          const placedTime = Object.entries(state.timeline).find(([, eventId]) => eventId === event.id)?.[0];
-          const aligned = state.timeline[event.time] === event.id;
-          const status = aligned ? "" : placedTime ? `Placed at ${placedTime}` : unlocked ? "Ready to place" : "Memory not restored";
-          return `<article class="journal-timeline-card ${unlocked ? "is-unlocked" : "is-locked"} ${aligned ? "is-aligned" : ""}" data-journal-event="${event.id}" style="--timeline-column:${index + 1}"><span class="timeline-index">${index + 1}</span><time>${event.time}</time>${unlocked ? `<img src="${exhibit.artifactImage}" alt="">` : `<div class="timeline-card-lock" aria-hidden="true">◇</div>`}<div>${status ? `<span class="clue-meta">${status}</span>` : ""}<h4>${unlocked ? event.title : "Unrecovered event"}</h4><p>${unlocked ? `Source: ${event.source}` : "Restore its exhibit memory to reveal this moment."}</p></div></article>`;
+          const aligned = event.placedTime === event.time;
+          const status = aligned ? "" : `Placed at ${event.placedTime}`;
+          return `<article class="journal-timeline-card ${unlocked ? "is-unlocked" : "is-locked"} ${aligned ? "is-aligned" : ""}" data-journal-event="${event.id}" style="--timeline-column:${index + 1}"><span class="timeline-index">${index + 1}</span><time>${event.placedTime}</time>${unlocked ? `<img src="${exhibit.artifactImage}" alt="">` : `<div class="timeline-card-lock" aria-hidden="true">◇</div>`}<div>${status ? `<span class="clue-meta">${status}</span>` : ""}<h4>${unlocked ? event.title : "Unrecovered event"}</h4><p>${unlocked ? `Source: ${event.source}` : "Restore its exhibit memory to reveal this moment."}</p></div></article>`;
         }).join("")}
-      </div></div><footer><span>${placedEvents.length} event${placedEvents.length === 1 ? "" : "s"} placed on the board</span><button class="button button-primary" data-panel="case">Open Timeline Board</button></footer></section>`;
+      </div></div>` : `<div class="journal-timeline-empty"><span aria-hidden="true">◇</span><p>Place an event on the Timeline Board to begin the recovered sequence.</p></div>`}<footer><span>${placedEvents.length} event${placedEvents.length === 1 ? "" : "s"} placed on the board</span><button class="button button-primary" data-panel="case">Open Timeline Board</button></footer></section>`;
   }
 
   function openJournal(tab = "clues") {
@@ -915,6 +1264,11 @@
   }
 
   function caseMarkup() {
+    if (!phase2Unlocked()) {
+      return `<section class="modal case-modal phase-locked-modal" aria-labelledby="case-title">${modalHeader("Case Board", "Phase 2 system · sealed")}
+        <div class="phase-lock-card"><span aria-hidden="true">II</span><h2 id="case-title">The board is still asleep.</h2><p>Restore the Raincoat, Teacup, and Silver Umbrella memories. Their combined testimony will reveal the timeline and contradiction tools.</p><strong>${state.completed.filter((id) => DATA.exhibits[id]?.phase === 1).length} / 3 opening memories restored</strong></div>
+      </section>`;
+    }
     const availableEvents = DATA.timeline.filter((event) => hasCompleted(EVENT_EXHIBIT[event.id]));
     const placed = new Set(Object.values(state.timeline));
     const unsolved = DATA.contradictions.filter((item) => !state.contradictions.includes(item.id));
@@ -986,7 +1340,7 @@
     const event = DATA.timeline.find((item) => item.id === selectedTimelineEvent);
     const correct = event.time === time;
     selectedTimelineEvent = null;
-    saveState(); playTone(correct ? 650 : 190); refreshCase();
+    saveState(); playCue(correct ? "timeline" : "error"); refreshCase();
     if (correct) toast("Event aligned", `${time} · ${event.title}`);
   }
 
@@ -998,21 +1352,22 @@
     if (!statementId || !memoryId || !evidenceId) { feedback.textContent = "Choose a statement, a restored memory, and a physical clue."; return; }
     const contradiction = DATA.contradictions.find((item) => item.id === statementId);
     if (contradiction.evidence !== evidenceId || contradiction.memoryExhibit !== memoryId) {
-      feedback.textContent = "The thread slips loose. All three cards must describe the same remembered event."; playTone(165); return;
+      feedback.textContent = "The thread slips loose. All three cards must describe the same remembered event."; playCue("error"); return;
     }
     state.contradictions.push(statementId);
     const synthesized = syncCaseClues();
-    saveState(); playTone(690, .2); refreshCase();
+    saveState(); playCue("contradiction"); refreshCase();
     toast("Contradiction proven", `${contradiction.speaker}’s statement cannot stand.`);
     if (synthesized) toast("Case clue synthesized", "Three lies reveal a pattern of protection around the archive.");
-    updateMuseum();
+    updateMuseum(true);
   }
 
   function openMenu() {
     const testControls = testModeEnabled ? `<div class="settings test-settings"><p class="eyebrow">Test controls</p><div class="setting-row"><span>Completed case state</span><button class="switch" data-test-completion aria-label="Toggle completed test state" aria-pressed="${testCompletionIsActive()}">${testCompletionIsActive() ? "On" : "Off"}</button></div></div>` : "";
     openModal(`<section class="modal menu-modal" aria-labelledby="menu-title">${modalHeader("Museum Menu", "Investigation progress is saved automatically")}
       <div class="menu-grid"><div><h3 id="menu-title">Case progress</h3><p>${completedCount()} of 7 memories restored</p><p>${correctTimelineCount()} timeline events aligned</p><p>${state.contradictions.length} contradictions proven</p><button class="button button-quiet" data-restart>Restart investigation</button></div>
-      <div class="settings"><label class="setting-row">Memory cue volume <input id="volume-setting" type="range" min="0" max="100" value="${state.settings.volume}"></label>
+      <div class="settings" aria-label="Game settings"><div class="setting-row"><span>All sound</span><button class="switch" data-setting="muted" aria-label="Mute all sound" aria-pressed="${state.settings.muted}">${state.settings.muted ? "Muted" : "On"}</button></div>
+      <label class="setting-row">Sound level <span class="range-control"><input id="volume-setting" type="range" min="0" max="100" value="${state.settings.volume}" aria-describedby="volume-output"><output id="volume-output">${state.settings.volume}%</output></span></label>
       <label class="setting-row">Text pace <select id="text-speed"><option value="calm" ${state.settings.textSpeed === "calm" ? "selected" : ""}>Calm</option><option value="quick" ${state.settings.textSpeed === "quick" ? "selected" : ""}>Quick</option><option value="instant" ${state.settings.textSpeed === "instant" ? "selected" : ""}>Instant</option></select></label>
       <div class="setting-row"><span>Reduced motion</span><button class="switch" data-setting="reducedMotion" aria-pressed="${state.settings.reducedMotion}">${state.settings.reducedMotion ? "On" : "Off"}</button></div>
       <div class="setting-row"><span>Larger text</span><button class="switch" data-setting="largeText" aria-pressed="${state.settings.largeText}">${state.settings.largeText ? "On" : "Off"}</button></div>${testControls}</div></div></section>`);
@@ -1063,26 +1418,86 @@
     visitor: { title: "The Visitor Who Almost Remembered", glow: "#372c43", image: "assets/suspects/the-museum.png", text: "The accusation settles into the archive like dust. The museum thanks you for protecting its collection. When the lights return, a new exhibit label bears your name—and your last memory is already fading." }
   };
 
+  function renderCutsceneSlide() {
+    if (!activeCutscene) return;
+    const { screen, config, index } = activeCutscene;
+    const copy = $(".cutscene-copy", screen);
+    copy.classList.remove("is-visible");
+    copy.innerHTML = `<p>${config.slides[index]}</p>`;
+    void copy.offsetWidth;
+    const next = $("[data-cutscene-next]", screen);
+    const isLast = index === config.slides.length - 1;
+    next.setAttribute("aria-label", isLast ? "Finish cutscene" : "Next scene");
+    next.title = isLast ? "Finish cutscene" : "Next scene";
+    requestAnimationFrame(() => copy.classList.add("is-visible"));
+  }
+
+  function finishCutscene() {
+    if (!activeCutscene) return;
+    const { screen, onComplete } = activeCutscene;
+    activeCutscene = null;
+    window.clearTimeout(cutsceneSkipTimeout);
+    cutsceneSkipTimeout = null;
+    screen.remove();
+    onComplete();
+  }
+
+  function advanceCutscene() {
+    if (!activeCutscene) return;
+    if (activeCutscene.index >= activeCutscene.config.slides.length - 1) return finishCutscene();
+    activeCutscene.index += 1;
+    renderCutsceneSlide();
+    playCue("transition");
+  }
+
+  function playCutscene(id, onComplete) {
+    const config = CUTSCENES[id];
+    if (!config) return onComplete();
+    const screen = document.createElement("section");
+    const isStart = id === "start";
+    screen.className = `cutscene-screen cutscene-${isStart ? "start" : "ending"}`;
+    screen.setAttribute("aria-label", `${config.title} cutscene`);
+    const heading = isStart ? "" : `<p class="eyebrow">Case outcome</p><h2>${config.title}</h2>`;
+    screen.innerHTML = `<button class="cutscene-skip is-hidden" type="button" data-cutscene-skip>Skip cutscene</button>
+      <div class="cutscene-panel">${heading}<div class="cutscene-copy" aria-live="polite"></div></div>
+      <div class="cutscene-controls"><button class="cutscene-next" type="button" data-cutscene-next aria-label="Next scene"><span aria-hidden="true">&gt;</span></button></div>`;
+    document.body.append(screen);
+    activeCutscene = { screen, config, index: 0, onComplete };
+    renderCutsceneSlide();
+    $("[data-cutscene-next]", screen).focus();
+    cutsceneSkipTimeout = window.setTimeout(() => {
+      if (!activeCutscene || activeCutscene.screen !== screen) return;
+      $("[data-cutscene-skip]", screen).classList.remove("is-hidden");
+    }, 3000);
+  }
+
   function showEnding(id) {
     state.ending = id; saveState(); closeModal();
     $("#toast-region").innerHTML = "";
+    playCutscene(id, () => renderEndingSummary(id));
+  }
+
+  function renderEndingSummary(id) {
     const ending = ENDINGS[id];
     const screen = document.createElement("section");
     const investigatorName = state.character === "male" ? "Silas Hart" : "Elara Finch";
-    const portrait = `assets/characters/${state.character || "female"}/portrait.png`;
+    const portrait = DATA.characterAnimations[state.character || "female"].portrait;
     screen.className = `ending-screen ending-${id}`;
     screen.style.setProperty("--ending-glow", ending.glow);
     screen.style.setProperty("--ending-image", `url("${ending.image}")`);
     screen.innerHTML = `<div class="ending-vignette" aria-hidden="true"></div><div class="ending-card"><img class="ending-investigator" src="${portrait}" alt="${investigatorName}"><div class="ending-copy"><p class="eyebrow">Case ending · ${investigatorName}</p><h2>${ending.title}</h2><p>${ending.text}</p>${id === "visitor" ? `<div class="museum-label"><span>NEW ACQUISITION</span><strong>${investigatorName}</strong><small>A memory auditor who came too close.</small></div>` : ""}<div class="ending-stats"><span>${completedCount()} memories</span><span>${correctTimelineCount()} timeline</span><span>${state.contradictions.length} contradictions</span></div><button class="button button-primary" data-new-investigation>Begin another investigation</button></div></div>`;
-    document.body.append(screen); playTone(id === "visitor" ? 170 : 620, .4);
+    document.body.append(screen); playCue(id === "visitor" || id === "beautiful-lie" ? "endingDark" : "endingGood");
   }
 
   function resetGame() {
-    localStorage.removeItem(SAVE_KEY); sessionStorage.removeItem("phase2-noticed");
+    localStorage.removeItem(SAVE_KEY);
+    [1, 2, 3].forEach((phase) => sessionStorage.removeItem(`phase-${phase}-noticed`));
     sessionStorage.removeItem(TEST_SNAPSHOT_KEY);
     state = structuredClone(DEFAULT_STATE); selectedCharacter = null; keys.clear();
     window.clearTimeout(interactionTimeout); player.classList.remove("is-moving", "is-interacting", "facing-left"); player.dataset.direction = "front";
-    $(".ending-screen")?.remove(); applySettings(); updateMuseum(); showScreen(titleScreen); refreshContinueButton();
+    $(".ending-screen")?.remove(); $(".cutscene-screen")?.remove(); activeCutscene = null; window.clearTimeout(cutsceneSkipTimeout);
+    activePhaseCard?.remove(); activePhaseCard = null; window.clearTimeout(phaseCardTimeout);
+    applySettings(); updateMuseum(); showScreen(titleScreen); refreshContinueButton();
   }
 
   function refreshContinueButton() {
@@ -1092,12 +1507,14 @@
   function enterMuseum(showBriefing = false) {
     showScreen(museumScreen); applySettings(); recoverPlayerPosition(); updateMuseum(); createParticles();
     if (showBriefing) {
-      openModal(`<section class="modal briefing-modal" aria-labelledby="briefing-title">${modalHeader("11:58 PM · Private Preview", "Emergency memory audit authorized")}
-        <div class="memory-text briefing-content"><p class="eyebrow">Case briefing</p><h2 id="briefing-title">Elian Voss vanished at 11:43 PM.</h2><p>Seven exhibits witnessed the night, but their memories are distorted. Walk with <kbd>WASD</kbd> or the arrow keys. Approach a glowing case and press <kbd>E</kbd>. Open your journal with <kbd>J</kbd>.</p><p>The museum will not make this easy.</p><button class="button button-primary" data-close>Begin investigation</button></div></section>`);
+      showPhaseCard(1, () => openModal(`<section class="modal briefing-modal" aria-labelledby="briefing-title">${modalHeader("11:58 PM · Private Preview", "Emergency memory audit authorized")}
+        <div class="memory-text briefing-content"><p class="eyebrow">Case briefing</p><h2 id="briefing-title">Elian Voss vanished at 11:43 PM.</h2><p>Seven exhibits witnessed the night, but their memories are distorted. Walk with <kbd>WASD</kbd> or the arrow keys. Approach a glowing case and press <kbd>E</kbd>. Open your journal with <kbd>J</kbd>.</p><p>The museum will not make this easy.</p><button class="button button-primary" data-close>Begin investigation</button></div></section>`));
     }
   }
 
   function handleClick(event) {
+    if (event.target.closest("[data-cutscene-next]")) return advanceCutscene();
+    if (event.target.closest("[data-cutscene-skip]")) return finishCutscene();
     const close = event.target.closest("[data-close]"); if (close) return closeModal();
     const panel = event.target.closest("[data-panel]");
     if (panel) {
@@ -1131,7 +1548,10 @@
     if (event.target.closest("[data-test-completion]")) return toggleTestCompletion();
     const setting = event.target.closest("[data-setting]");
     if (setting) {
-      const key = setting.dataset.setting; state.settings[key] = !state.settings[key]; saveState(); applySettings(); setting.setAttribute("aria-pressed", state.settings[key]); setting.textContent = state.settings[key] ? "On" : "Off"; return;
+      const key = setting.dataset.setting; state.settings[key] = !state.settings[key]; saveState(); applySettings(); setting.setAttribute("aria-pressed", state.settings[key]);
+      setting.textContent = key === "muted" ? (state.settings[key] ? "Muted" : "On") : state.settings[key] ? "On" : "Off";
+      if (key === "muted" && !state.settings.muted) playCue("transition");
+      return;
     }
     if (event.target.closest("[data-restart]")) {
       if (window.confirm("Erase the current case and begin again?")) resetGame();
@@ -1139,6 +1559,8 @@
   }
 
   document.addEventListener("click", handleClick);
+  document.addEventListener("pointerdown", ensureAudio, { capture: true });
+  document.addEventListener("keydown", ensureAudio, { capture: true });
   modalRoot.addEventListener("change", (event) => {
     if (event.target.matches("[data-accusation]")) {
       const selects = $$("[data-accusation]", modalRoot);
@@ -1146,15 +1568,25 @@
       $$("[data-accuse-who]", modalRoot).forEach((card) => card.setAttribute("aria-pressed", String(card.dataset.accuseWho === $("#culprit-select", modalRoot)?.value)));
       $("[data-confirm-accusation]", modalRoot).disabled = selects.some((select) => !select.value);
     }
-    if (event.target.id === "volume-setting") { state.settings.volume = Number(event.target.value); saveState(); playTone(440); }
+    if (event.target.id === "volume-setting") { state.settings.volume = Number(event.target.value); saveState(); updateAudioLevel(); playCue("inspect"); }
     if (event.target.id === "text-speed") { state.settings.textSpeed = event.target.value; saveState(); applySettings(); }
   });
   modalRoot.addEventListener("input", (event) => {
-    if (event.target.id === "volume-setting") state.settings.volume = Number(event.target.value);
+    if (event.target.id === "volume-setting") {
+      state.settings.volume = Number(event.target.value);
+      $("#volume-output", modalRoot).textContent = `${state.settings.volume}%`;
+      updateAudioLevel();
+    }
   });
 
   document.addEventListener("keydown", (event) => {
     const key = event.key.toLowerCase();
+    if (activePhaseCard) { event.preventDefault(); return; }
+    if (activeCutscene) {
+      if (["arrowright", "enter", " "].includes(key)) { event.preventDefault(); advanceCutscene(); }
+      else if (key === "escape" && !$("[data-cutscene-skip]", activeCutscene.screen).classList.contains("is-hidden")) { event.preventDefault(); finishCutscene(); }
+      return;
+    }
     if (key === "f8") { event.preventDefault(); setCollisionDebug(!collisionDebugEnabled); return; }
     if (key === "escape") { if (modalRoot.classList.contains("is-open")) closeModal(); else if (museumScreen.classList.contains("is-active")) openMenu(); return; }
     if (modalRoot.classList.contains("is-open")) {
@@ -1182,18 +1614,32 @@
   });
   document.addEventListener("keyup", (event) => keys.delete(event.key.toLowerCase()));
   window.addEventListener("blur", () => { keys.clear(); player.classList.remove("is-moving"); saveState(); });
+  document.addEventListener("visibilitychange", () => {
+    if (!audioContext || !audioUnlocked) return;
+    if (document.hidden) audioContext.suspend?.().catch?.(() => {});
+    else audioContext.resume?.().then(updateAudioLevel).catch?.(() => {});
+  });
   window.addEventListener("beforeunload", saveState);
 
-  $("#begin-button").addEventListener("click", () => { selectedCharacter = null; showScreen(selectionScreen); });
-  $("#continue-button").addEventListener("click", () => enterMuseum(false));
+  $("#begin-button").addEventListener("click", () => {
+    selectedCharacter = null;
+    playCutscene("start", () => showScreen(selectionScreen));
+  });
+  $("#continue-button").addEventListener("click", async () => {
+    await preloadCharacterAssets(state.character || "female");
+    enterMuseum(false);
+  });
   $$(".character-card").forEach((card) => card.addEventListener("click", () => {
     selectedCharacter = card.dataset.character;
     $$(".character-card").forEach((item) => item.setAttribute("aria-checked", String(item === card)));
     $("#start-button").disabled = false; playTone(440);
   }));
-  $("#start-button").addEventListener("click", () => {
+  $("#start-button").addEventListener("click", async () => {
     if (!selectedCharacter) return;
-    state.started = true; state.character = selectedCharacter; state.ending = null; saveState(); enterMuseum(true);
+    $("#start-button").disabled = true;
+    await preloadCharacterAssets(selectedCharacter);
+    state.started = true; state.character = selectedCharacter; state.ending = null; saveState();
+    enterMuseum(true);
   });
   $$(".exhibit").forEach((exhibit) => {
     const inspect = () => beginExhibitInteraction(exhibit.dataset.exhibit);
@@ -1208,7 +1654,25 @@
     isWalkablePoint: (point) => validPosition(Number(point.x), Number(point.y)),
     setDebug: setCollisionDebug
   };
+  window.MUSEUM_AUDIO_API = {
+    ensure: ensureAudio,
+    status: () => ({
+      supported: Boolean(window.AudioContext || window.webkitAudioContext),
+      unlocked: audioUnlocked,
+      state: audioContext?.state || "uninitialized",
+      ambienceNodeCount: ambienceNodes.length,
+      musicPlaying: Boolean(musicSource),
+      musicLooping: Boolean(musicSource?.loop),
+      musicDuration: musicSource?.buffer?.duration || 0,
+      musicLevel: MUSIC_LEVEL,
+      musicContinuous: true,
+      cueLevel: CUE_LEVEL,
+      effectiveLevel: state.settings.muted ? 0 : state.settings.volume / 100
+    })
+  };
 
-  applySettings(); refreshContinueButton(); updateMuseum(); createParticles(); setCollisionDebug(collisionDebugEnabled);
+  installAssetFallbacks();
+  preloadAssets();
+  applySettings(); refreshContinueButton(); updateMuseum(); createParticles(); setCollisionDebug(collisionDebugEnabled); ensureAudio();
   movementFrame = requestAnimationFrame(movementLoop);
 })();
