@@ -273,8 +273,16 @@ def main():
         page.get_by_role("tab", name="Timeline").click()
         assert page.locator(".journal-timeline-card").count() == 7
         assert page.locator(".journal-timeline-card.is-unlocked").count() == 1
-        assert page.locator(".journal-timeline-section > header .clue-meta").evaluate("el => getComputedStyle(el).color") == "rgb(72, 39, 47)"
+        assert "auditor-journal.png" not in page.locator(".journal-paper.is-timeline").evaluate("el => getComputedStyle(el).backgroundImage")
+        assert "The night of the preview" not in page.locator(".journal-timeline-section").inner_text()
         assert page.locator(".journal-timeline-card.is-locked .clue-meta").first.evaluate("el => getComputedStyle(el).color") == "rgb(216, 198, 208)"
+        assert page.locator(".timeline-alignment").inner_text() == "0 / 7 ALIGNED"
+        assert page.locator(".journal-timeline-card").nth(0).evaluate("el => getComputedStyle(el).gridRowStart") == "1"
+        assert page.locator(".journal-timeline-card").nth(1).evaluate("el => getComputedStyle(el).gridRowStart") == "3"
+        assert page.locator(".journal-timeline-card").nth(0).evaluate("el => getComputedStyle(el).gridColumnStart") == "1"
+        assert page.locator(".journal-timeline-card").nth(1).evaluate("el => getComputedStyle(el).gridColumnStart") == "2"
+        assert page.locator(".journal-timeline-card").nth(0).locator("time").evaluate("el => getComputedStyle(el).bottom") == "-76px"
+        assert page.locator(".journal-timeline-card").nth(1).locator("time").evaluate("el => getComputedStyle(el).top") == "-76px"
         assert page.locator(".journal-timeline").evaluate("el => el.scrollWidth > el.clientWidth")
         page.locator(".journal-timeline").evaluate("el => { el.scrollLeft = 300; }")
         assert page.locator(".journal-timeline").evaluate("el => el.scrollLeft > 0")

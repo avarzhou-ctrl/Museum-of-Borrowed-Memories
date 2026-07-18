@@ -869,7 +869,7 @@
   function journalMarkup(activeTab = "clues") {
     const tabs = ["clues", "people", "memories", "timeline"];
     return `<section class="modal journal-modal" aria-labelledby="journal-title">${modalHeader("Auditor’s Journal", `${state.clues.length} clues · ${completedCount()} memories`)}` +
-      `<div class="tabs" role="tablist">${tabs.map((tab) => { const label = tab[0].toUpperCase() + tab.slice(1); const hasNews = journalTabHasNotification(tab); return `<button class="tab" role="tab" data-journal-tab="${tab}" data-notification="${hasNews}" aria-label="${label}${hasNews ? ", new entries" : ""}" aria-controls="journal-content" aria-selected="${activeTab === tab}" tabindex="${activeTab === tab ? 0 : -1}">${label}</button>`; }).join("")}</div><div class="journal-paper"><div class="tab-panel" id="journal-content" role="tabpanel">${journalContent(activeTab)}</div></div></section>`;
+      `<div class="tabs" role="tablist">${tabs.map((tab) => { const label = tab[0].toUpperCase() + tab.slice(1); const hasNews = journalTabHasNotification(tab); return `<button class="tab" role="tab" data-journal-tab="${tab}" data-notification="${hasNews}" aria-label="${label}${hasNews ? ", new entries" : ""}" aria-controls="journal-content" aria-selected="${activeTab === tab}" tabindex="${activeTab === tab ? 0 : -1}">${label}</button>`; }).join("")}</div><div class="journal-paper ${activeTab === "timeline" ? "is-timeline" : ""}"><div class="tab-panel" id="journal-content" role="tabpanel">${journalContent(activeTab)}</div></div></section>`;
   }
 
   function journalContent(tab) {
@@ -891,15 +891,15 @@
       return memories.length ? `<div class="clue-grid">${memories.map(([id, item]) => `<article class="clue-card memory-card"><img class="clue-card-art" src="${item.memoryImage}" alt=""><span class="clue-meta">Restored memory</span><h3>${item.shortTitle}</h3><p>${item.memory}</p><button class="puzzle-button" data-replay="${id}">Replay</button></article>`).join("")}</div>` : `<div class="empty-state">The pages wait for an object to remember.</div>`;
     }
     const placedEvents = Object.values(state.timeline);
-    return `<section class="journal-timeline-section" aria-labelledby="journal-timeline-title"><header><div><span class="clue-meta">The night of the preview</span><h3 id="journal-timeline-title">Recovered sequence</h3></div><span>${correctTimelineCount()} / 7 aligned</span></header>
+    return `<section class="journal-timeline-section" aria-labelledby="journal-timeline-title"><header><h3 id="journal-timeline-title">Recovered sequence</h3><span class="timeline-alignment">${correctTimelineCount()} / 7 aligned</span></header>
       <div class="journal-timeline" tabindex="0" aria-label="Horizontally scrolling recovered timeline"><div class="journal-timeline-track">
         ${DATA.timeline.map((event, index) => {
           const exhibit = DATA.exhibits[EVENT_EXHIBIT[event.id]];
           const unlocked = hasCompleted(EVENT_EXHIBIT[event.id]);
           const placedTime = Object.entries(state.timeline).find(([, eventId]) => eventId === event.id)?.[0];
           const aligned = state.timeline[event.time] === event.id;
-          const status = aligned ? "Aligned" : placedTime ? `Placed at ${placedTime}` : unlocked ? "Ready to place" : "Memory not restored";
-          return `<article class="journal-timeline-card ${unlocked ? "is-unlocked" : "is-locked"} ${aligned ? "is-aligned" : ""}" data-journal-event="${event.id}"><span class="timeline-index">${index + 1}</span><time>${event.time}</time>${unlocked ? `<img src="${exhibit.artifactImage}" alt="">` : `<div class="timeline-card-lock" aria-hidden="true">◇</div>`}<div><span class="clue-meta">${status}</span><h4>${unlocked ? event.title : "Unrecovered event"}</h4><p>${unlocked ? `Source: ${event.source}` : "Restore its exhibit memory to reveal this moment."}</p></div></article>`;
+          const status = aligned ? "" : placedTime ? `Placed at ${placedTime}` : unlocked ? "Ready to place" : "Memory not restored";
+          return `<article class="journal-timeline-card ${unlocked ? "is-unlocked" : "is-locked"} ${aligned ? "is-aligned" : ""}" data-journal-event="${event.id}" style="--timeline-column:${index + 1}"><span class="timeline-index">${index + 1}</span><time>${event.time}</time>${unlocked ? `<img src="${exhibit.artifactImage}" alt="">` : `<div class="timeline-card-lock" aria-hidden="true">◇</div>`}<div>${status ? `<span class="clue-meta">${status}</span>` : ""}<h4>${unlocked ? event.title : "Unrecovered event"}</h4><p>${unlocked ? `Source: ${event.source}` : "Restore its exhibit memory to reveal this moment."}</p></div></article>`;
         }).join("")}
       </div></div><footer><span>${placedEvents.length} event${placedEvents.length === 1 ? "" : "s"} placed on the board</span><button class="button button-primary" data-panel="case">Open Timeline Board</button></footer></section>`;
   }
@@ -1109,6 +1109,7 @@
     if (tab) {
       markJournalTabSeen(tab.dataset.journalTab);
       $$("[data-journal-tab]", modalRoot).forEach((item) => { item.setAttribute("aria-selected", String(item === tab)); item.tabIndex = item === tab ? 0 : -1; });
+      $(".journal-paper", modalRoot).classList.toggle("is-timeline", tab.dataset.journalTab === "timeline");
       $("#journal-content", modalRoot).innerHTML = journalContent(tab.dataset.journalTab); updateNotificationBadges(); return;
     }
     const replay = event.target.closest("[data-replay]"); if (replay) return openMemory(replay.dataset.replay);

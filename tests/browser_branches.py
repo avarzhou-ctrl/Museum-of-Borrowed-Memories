@@ -315,6 +315,9 @@ def main():
         page.get_by_role("tab", name="People").click()
         page.screenshot(path="/tmp/museum-journal-people.png", full_page=True)
         page.get_by_role("tab", name="Timeline").click()
+        aligned_card = page.locator(".journal-timeline-card.is-aligned")
+        assert aligned_card.locator(".clue-meta").count() == 0
+        assert "rgb(111, 139, 102)" not in aligned_card.evaluate("el => getComputedStyle(el).boxShadow")
         page.screenshot(path="/tmp/museum-journal-timeline.png", full_page=True)
 
         # Every generated project asset used by the interface loaded successfully.
