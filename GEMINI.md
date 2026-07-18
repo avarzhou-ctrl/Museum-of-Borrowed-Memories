@@ -127,9 +127,9 @@ When told to reformat commits, follow the Conventional Commits (https://www.conv
     * refactor: Code restructuring without changing behavior.
     * perf: Performance-related improvements.
     * test: Adding or updating tests.
-- **Scope (optional):** The specific area of the project affected (api, auth, dashboard, db, frontend, generation, home, render, ui)
+- **Scope (optional):** The specific area of the game affected (movement, visuals, clues, endings, audio, or UI).
 - **Summary:** A concise, imperative sentence (e.g., Add support for...). Use the imperative mood (e.g., "Add," not "Added").
-- **Example:** "feat: allow provided config object to extend other configs"
+- **Example:** "feat: added character movement"
 
 ## Documentation
 - **Helpful Commenting:** Keep comments concise and focused on "Why" something is being done.

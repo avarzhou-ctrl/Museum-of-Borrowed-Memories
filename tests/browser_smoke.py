@@ -26,9 +26,17 @@ def restore_memory(page, exhibit, puzzle, choice, check_perspectives=False):
         assert human.get_attribute("aria-selected") == "true"
         page.screenshot(path="/tmp/museum-memory-perspective.png", full_page=True)
         page.get_by_role("tab", name="Object Memory").click()
+    restored_started = page.evaluate("performance.now()")
     page.get_by_role("button", name=choice, exact=True).click()
     assert page.get_by_role("tab", name="Restored Truth").get_attribute("aria-selected") == "true"
-    page.get_by_role("button", name="Return to gallery").click()
+    return_button = page.get_by_role("button", name="Return to gallery")
+    if exhibit == "raincoat":
+        page.wait_for_timeout(1500)
+        assert return_button.count() == 0
+    return_button.wait_for()
+    if exhibit == "raincoat":
+        assert page.evaluate("performance.now()") - restored_started >= 3000
+    return_button.click()
 
 
 def main():
@@ -45,11 +53,23 @@ def main():
 
         page.get_by_role("button", name="Enter the Museum").click()
         page.screenshot(path="/tmp/museum-selection.png", full_page=True)
+        assert page.locator('[data-character="female"] strong').inner_text() == "Elara Finch"
+        assert page.locator('[data-character="male"] strong').inner_text() == "Silas Hart"
+        assert page.locator(".character-card > span").count() == 2
+        assert page.locator("#select-title").evaluate("el => getComputedStyle(el).fontFamily") == page.locator("html").evaluate("el => getComputedStyle(el).getPropertyValue('--display').trim()")
+        assert page.locator("#start-button").evaluate("el => getComputedStyle(el).fontFamily") == page.locator("html").evaluate("el => getComputedStyle(el).getPropertyValue('--sans').trim()")
         page.locator('[data-character="female"]').click()
         page.get_by_role("button", name="Begin Audit").click()
+        assert page.locator(".briefing-content").evaluate("el => getComputedStyle(el).paddingTop") == "0px"
+        assert page.locator(".briefing-content").evaluate("el => getComputedStyle(el).marginTop") == "0px"
+        assert page.locator(".briefing-content > .eyebrow").evaluate("el => [getComputedStyle(el).paddingTop, getComputedStyle(el).paddingBottom]") == ["10.4px", "0px"]
+        page.screenshot(path="/tmp/museum-briefing.png", full_page=True)
         page.get_by_role("button", name="Begin investigation").click()
         page.screenshot(path="/tmp/museum-gallery.png", full_page=True)
         assert page.locator("#gallery.painted-gallery").is_visible()
+        assert page.locator("#player").evaluate("el => getComputedStyle(el).width") == "100px"
+        assert page.locator("#player-sprite").evaluate("el => getComputedStyle(el).height") == "158px"
+        assert page.locator(".hud-actions .icon-button").all_inner_texts() == ["Clues", "Journal", "Map", "Menu"]
         assert "menu.png" in page.locator(".hud-icon-menu").evaluate("el => getComputedStyle(el).backgroundImage")
         assert page.get_by_role("heading", name="Main Gallery").is_visible()
         assert page.locator('[data-exhibit="teacup"]').evaluate("el => el.style.getPropertyValue('--x')") == "25%"
@@ -133,14 +153,20 @@ def main():
         print("Proving contradictions...", flush=True)
         page.get_by_role("button", name="Open case board").click()
         links = [
-            ("mara-spoke", "mara-argument"),
-            ("mara-entered", "archive-fingerprint"),
-            ("celeste-left", "returned-in-storm"),
+            ("mara-spoke", "teacup", "mara-argument"),
+            ("mara-entered", "elevator", "archive-fingerprint"),
+            ("celeste-left", "raincoat", "returned-in-storm"),
         ]
-        for statement, evidence in links:
+        for statement, memory, evidence in links:
             page.locator("#statement-select").select_option(statement)
+            page.locator("#memory-select").select_option(memory)
             page.locator("#evidence-select").select_option(evidence)
-            page.get_by_role("button", name="Pin connection").click()
+            page.get_by_role("button", name="Pin three-part connection").click()
+        page.screenshot(path="/tmp/museum-case-board.png", full_page=True)
+        assert page.locator(".evidence-node").count() == 9
+        page.get_by_role("button", name="Close panel").click()
+        page.get_by_role("button", name="Open journal").click()
+        assert page.get_by_text("A Pattern of Protection", exact=True).is_visible()
         page.get_by_role("button", name="Close panel").click()
 
         def match(p):

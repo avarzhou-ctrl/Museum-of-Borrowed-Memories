@@ -9,6 +9,7 @@ window.GAME_DATA = {
       property: "It remembers every person who left the museum crying.",
       instruction: "Wipe five droplets from the glass.",
       puzzle: "wipe",
+      artifactImage: "assets/artifacts/raincoat.png",
       memoryImage: "assets/memories/raincoat.png",
       memory: "A soaked figure crosses the threshold long after she claimed to have left. The raincoat trembles as the museum recognizes her.",
       perspectives: {
@@ -35,6 +36,7 @@ window.GAME_DATA = {
       property: "Its cracks have rearranged themselves into the shape of words.",
       instruction: "Rotate the cup until the fractures align near 72°.",
       puzzle: "rotate",
+      artifactImage: "assets/artifacts/teacup.png",
       memoryImage: "assets/memories/teacup.png",
       memory: "Elian stands beside a service table. Mara's voice is low and furious: ‘You would empty every case for the sake of people who chose to forget.’",
       perspectives: {
@@ -61,6 +63,7 @@ window.GAME_DATA = {
       property: "It remembers being carried into the wrong room.",
       instruction: "Open and close the umbrella three times to loosen the hidden clasp.",
       puzzle: "toggle",
+      artifactImage: "assets/artifacts/umbrella.png",
       memoryImage: "assets/memories/umbrella.png",
       memory: "A gloved hand sets the umbrella beside Celeste's things at 11:50. Its wet tip points toward the archive corridor—not the door.",
       perspectives: {
@@ -87,6 +90,7 @@ window.GAME_DATA = {
       property: "It remembers every fingerprint that has touched it.",
       instruction: "Repeat the four-note pressure sequence: 1 · 3 · 1 · 2.",
       puzzle: "sequence",
+      artifactImage: "assets/artifacts/elevator.png",
       memoryImage: "assets/memories/elevator.png",
       memory: "Mara presses the hidden control. Jonah watches from the landing and steps aside. Gold dust clings to both their hands.",
       perspectives: {
@@ -113,6 +117,7 @@ window.GAME_DATA = {
       property: "The missing note is not lost. It has been locked away.",
       instruction: "Play the archive phrase: D · A · C · B.",
       puzzle: "melody",
+      artifactImage: "assets/artifacts/musicbox.png",
       memoryImage: "assets/memories/musicbox.png",
       memory: "Four notes pass down the archive corridor. Locks turn inside the walls. In the Orchard, every glass fruit opens its eye.",
       perspectives: {
@@ -139,6 +144,7 @@ window.GAME_DATA = {
       property: "The book remembers consent differently from the people who gave it.",
       instruction: "Compare the signatures and identify the altered consent line.",
       puzzle: "compare",
+      artifactImage: "assets/artifacts/guestbook.png",
       memoryImage: "assets/memories/guestbook.png",
       memory: "A docent covers the final paragraph with one hand. Guests sign for ‘preservation’; the carbon copy beneath says ‘permanent transfer.’",
       perspectives: {
@@ -165,6 +171,7 @@ window.GAME_DATA = {
       property: "The oldest fruit beats with a living pulse.",
       instruction: "Return each fragment to its owner: grief, guilt, and truth.",
       puzzle: "match",
+      artifactImage: "assets/artifacts/orchard.png",
       memoryImage: "assets/memories/orchard.png",
       memory: "Mara plays the melody. The tree bends toward Elian and draws his reflection into its heart. ‘If you expose it,’ she whispers, ‘all of them disappear.’",
       perspectives: {
@@ -218,17 +225,47 @@ window.GAME_DATA = {
     { id: "planted", time: "11:50 PM", title: "False evidence is planted", source: "The Umbrella" }
   ],
   contradictions: [
-    { id: "mara-spoke", speaker: "Mara", statement: "I never spoke to Elian that night.", evidence: "mara-argument" },
-    { id: "mara-entered", speaker: "Mara", statement: "I never entered the archive.", evidence: "archive-fingerprint" },
-    { id: "celeste-left", speaker: "Celeste", statement: "I left before the storm.", evidence: "returned-in-storm" },
-    { id: "museum-umbrella", speaker: "Museum label", statement: "The umbrella was found near Celeste.", evidence: "planted-umbrella" },
-    { id: "jonah-saw", speaker: "Jonah", statement: "I saw nothing.", evidence: "archive-fingerprint" }
+    { id: "mara-spoke", suspect: "mara", speaker: "Mara", statement: "I never spoke to Elian that night.", memoryExhibit: "teacup", evidence: "mara-argument", update: "Elian confronted me. He wanted to empty the archive, even the memories people begged to forget." },
+    { id: "mara-entered", suspect: "mara", speaker: "Mara", statement: "I never entered the archive.", memoryExhibit: "elevator", evidence: "archive-fingerprint", update: "I used Floor Thirteen. I believed the Orchard was the only thing keeping thousands of memories alive." },
+    { id: "celeste-left", suspect: "celeste", speaker: "Celeste", statement: "I left before the storm.", memoryExhibit: "raincoat", evidence: "returned-in-storm", update: "I came back for my sister. The museum kept the last afternoon I could still remember her voice." },
+    { id: "museum-umbrella", suspect: "museum", speaker: "Museum label", statement: "The umbrella was found near Celeste.", memoryExhibit: "umbrella", evidence: "planted-umbrella", update: "PROVENANCE REVISED: THE OBJECT WAS PLACED. THE COLLECTION REQUIRED A SAFER STORY." },
+    { id: "jonah-saw", suspect: "jonah", speaker: "Jonah", statement: "I saw nothing.", memoryExhibit: "elevator", evidence: "archive-fingerprint", update: "I saw Mara enter. I took her money and stepped aside because I was afraid of losing everything." }
   ],
   suspects: [
-    { name: "Mara Vale", role: "Deputy curator", statement: "I left Elian to finish the preview alone.", reveal: "She believes the archive rescues memories from oblivion." },
-    { name: "Jonah Reed", role: "Night guard", statement: "The gallery was quiet. I saw nothing.", reveal: "He took a bribe and stepped aside, but did not trap Elian." },
-    { name: "Celeste Wren", role: "Museum donor", statement: "I left before the storm began.", reveal: "She returned for a memory of her late sister." },
-    { name: "The Museum", role: "Archive entity", statement: "EVERY OBJECT WAS FREELY GIVEN.", reveal: "It changes labels and shelters its collection." }
+    {
+      id: "mara", name: "Mara Vale", role: "Deputy curator", image: "assets/suspects/mara-vale.png",
+      statement: "I left Elian to finish the preview alone.",
+      reveal: "Mara trapped Elian, but believes the archive rescues fragile memories from oblivion.",
+      contradictionIds: ["mara-spoke", "mara-entered"]
+    },
+    {
+      id: "jonah", name: "Jonah Reed", role: "Night guard", image: "assets/suspects/jonah-reed.png",
+      statement: "The gallery was quiet. I saw nothing.",
+      reveal: "Jonah accepted a bribe and enabled Mara, but he did not trap Elian.",
+      contradictionIds: ["jonah-saw"]
+    },
+    {
+      id: "celeste", name: "Celeste Wren", role: "Museum donor", image: "assets/suspects/celeste-wren.png",
+      statement: "I left before the storm began.",
+      reveal: "Celeste returned for her late sister’s memory and was framed with her own umbrella.",
+      contradictionIds: ["celeste-left"]
+    },
+    {
+      id: "museum", name: "The Museum", role: "Archive entity", image: "assets/suspects/the-museum.png",
+      statement: "EVERY OBJECT WAS FREELY GIVEN.",
+      reveal: "The Museum changes labels, obscures memories, and protects the collection through convenient stories.",
+      contradictionIds: ["museum-umbrella"]
+    }
+  ],
+  caseClues: [
+    {
+      id: "pattern-of-protection",
+      title: "A Pattern of Protection",
+      text: "Three disproven statements point to one design: Mara acted, Jonah enabled her, and the Museum edited the story.",
+      suspect: "Mara Vale · The Museum",
+      time: "Case synthesis",
+      image: "assets/suspects/the-museum.png"
+    }
   ],
   accusation: {
     who: ["Mara Vale", "Jonah Reed", "Celeste Wren", "The Museum"],
