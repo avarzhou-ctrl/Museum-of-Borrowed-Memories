@@ -40,7 +40,7 @@ Investigation progress, settings, timeline placements, and contradictions save a
 6. Restore the newly unlocked Glass Orchard.
 7. Place at least five timeline events, make a structured accusation, and decide the archive’s fate.
 
-The game supports a six-of-seven solution route, early accusations, five distinct endings, two selectable investigators with front/side/back movement and interaction animations, perspective-switching memory scenes, a draggable timeline, a visual evidence wall, evolving suspect statements and museum labels, keyboard navigation, reduced motion, larger text, and text-speed controls.
+The game supports a six-of-seven solution route, early accusations, five distinct endings, two selectable investigators with front/side/back movement and interaction animations, perspective-switching memory scenes, a draggable case-board timeline, a horizontally scrolling journal timeline, persistent new-entry/action badges, a visual evidence wall, evolving suspect statements and museum labels, keyboard navigation, reduced motion, larger text, and text-speed controls.
 
 ## Verify the prototype
 

@@ -14,6 +14,7 @@
     contradictions: [],
     timeline: {},
     investigations: {},
+    seen: { clues: 0, people: 0, memories: 0, timeline: 0 },
     settings: { reducedMotion: false, largeText: false, volume: 45, textSpeed: "calm" },
     player: { x: 50, y: 78 },
     ending: null
@@ -62,6 +63,7 @@
       const migrated = {
         ...structuredClone(DEFAULT_STATE), ...saved,
         settings: { ...DEFAULT_STATE.settings, ...(saved.settings || {}) },
+        seen: { ...DEFAULT_STATE.seen, ...(saved.seen || {}) },
         player: { ...DEFAULT_STATE.player, ...(saved.player || {}) },
         investigations: {}
       };
@@ -133,6 +135,54 @@
       return true;
     }
     return false;
+  }
+
+  function journalNotificationCounts() {
+    return {
+      clues: state.clues.length,
+      people: phase2Unlocked() ? 1 + state.contradictions.length : 0,
+      memories: completedCount(),
+      timeline: DATA.timeline.filter((event) => hasCompleted(EVENT_EXHIBIT[event.id])).length
+    };
+  }
+
+  function journalTabHasNotification(tab) {
+    const counts = journalNotificationCounts();
+    return counts[tab] > (state.seen?.[tab] || 0);
+  }
+
+  function caseActionsAvailable() {
+    const timelineAction = DATA.timeline.some((event) => hasCompleted(EVENT_EXHIBIT[event.id]) && state.timeline[event.time] !== event.id);
+    const contradictionAction = DATA.contradictions.some((item) => !state.contradictions.includes(item.id) && hasCompleted(item.memoryExhibit) && hasClue(item.evidence));
+    return timelineAction || contradictionAction;
+  }
+
+  function updateNotificationBadges() {
+    const journalHasNews = ["clues", "people", "memories", "timeline"].some(journalTabHasNotification);
+    const journalButton = $('[data-panel="journal"]');
+    const caseButton = $('[data-panel="case"]');
+    if (journalButton) {
+      journalButton.dataset.notification = String(journalHasNews);
+      journalButton.setAttribute("aria-label", journalHasNews ? "Open journal, new entries available" : "Open journal");
+    }
+    if (caseButton) {
+      const actionable = caseActionsAvailable();
+      caseButton.dataset.notification = String(actionable);
+      caseButton.setAttribute("aria-label", actionable ? "Open case board, action available" : "Open case board");
+    }
+    $$('[data-journal-tab]', modalRoot).forEach((tab) => {
+      const hasNews = journalTabHasNotification(tab.dataset.journalTab);
+      tab.dataset.notification = String(hasNews);
+      tab.setAttribute("aria-label", `${tab.textContent.trim()}${hasNews ? ", new entries" : ""}`);
+    });
+  }
+
+  function markJournalTabSeen(tab) {
+    const count = journalNotificationCounts()[tab] || 0;
+    if ((state.seen?.[tab] || 0) === count) return;
+    state.seen ||= structuredClone(DEFAULT_STATE.seen);
+    state.seen[tab] = count;
+    saveState();
   }
 
   function testCompletionIsActive() {
@@ -256,6 +306,7 @@
     $("#memory-count").textContent = `${completedCount()} / 7`;
     $("#progress-fill").style.width = `${(completedCount() / 7) * 100}%`;
     $("#objective").textContent = currentObjective();
+    updateNotificationBadges();
     updatePlayerVisual();
     if (phase2JustUnlocked) {
       sessionStorage.setItem("phase2-noticed", "true");
@@ -816,8 +867,9 @@
   }
 
   function journalMarkup(activeTab = "clues") {
+    const tabs = ["clues", "people", "memories", "timeline"];
     return `<section class="modal journal-modal" aria-labelledby="journal-title">${modalHeader("Auditor’s Journal", `${state.clues.length} clues · ${completedCount()} memories`)}` +
-      `<div class="tabs" role="tablist">${["clues","people","memories","timeline"].map((tab) => `<button class="tab" role="tab" data-journal-tab="${tab}" aria-controls="journal-content" aria-selected="${activeTab === tab}" tabindex="${activeTab === tab ? 0 : -1}">${tab[0].toUpperCase() + tab.slice(1)}</button>`).join("")}</div><div class="journal-paper"><div class="tab-panel" id="journal-content" role="tabpanel">${journalContent(activeTab)}</div></div></section>`;
+      `<div class="tabs" role="tablist">${tabs.map((tab) => { const label = tab[0].toUpperCase() + tab.slice(1); const hasNews = journalTabHasNotification(tab); return `<button class="tab" role="tab" data-journal-tab="${tab}" data-notification="${hasNews}" aria-label="${label}${hasNews ? ", new entries" : ""}" aria-controls="journal-content" aria-selected="${activeTab === tab}" tabindex="${activeTab === tab ? 0 : -1}">${label}</button>`; }).join("")}</div><div class="journal-paper"><div class="tab-panel" id="journal-content" role="tabpanel">${journalContent(activeTab)}</div></div></section>`;
   }
 
   function journalContent(tab) {
@@ -838,11 +890,24 @@
       const memories = Object.entries(DATA.exhibits).filter(([id]) => hasCompleted(id));
       return memories.length ? `<div class="clue-grid">${memories.map(([id, item]) => `<article class="clue-card memory-card"><img class="clue-card-art" src="${item.memoryImage}" alt=""><span class="clue-meta">Restored memory</span><h3>${item.shortTitle}</h3><p>${item.memory}</p><button class="puzzle-button" data-replay="${id}">Replay</button></article>`).join("")}</div>` : `<div class="empty-state">The pages wait for an object to remember.</div>`;
     }
-    return `<div class="empty-state"><div><p>${correctTimelineCount()} of 7 events correctly placed.</p><button class="button button-primary" data-panel="case">Open Timeline Board</button></div></div>`;
+    const placedEvents = Object.values(state.timeline);
+    return `<section class="journal-timeline-section" aria-labelledby="journal-timeline-title"><header><div><span class="clue-meta">The night of the preview</span><h3 id="journal-timeline-title">Recovered sequence</h3></div><span>${correctTimelineCount()} / 7 aligned</span></header>
+      <div class="journal-timeline" tabindex="0" aria-label="Horizontally scrolling recovered timeline"><div class="journal-timeline-track">
+        ${DATA.timeline.map((event, index) => {
+          const exhibit = DATA.exhibits[EVENT_EXHIBIT[event.id]];
+          const unlocked = hasCompleted(EVENT_EXHIBIT[event.id]);
+          const placedTime = Object.entries(state.timeline).find(([, eventId]) => eventId === event.id)?.[0];
+          const aligned = state.timeline[event.time] === event.id;
+          const status = aligned ? "Aligned" : placedTime ? `Placed at ${placedTime}` : unlocked ? "Ready to place" : "Memory not restored";
+          return `<article class="journal-timeline-card ${unlocked ? "is-unlocked" : "is-locked"} ${aligned ? "is-aligned" : ""}" data-journal-event="${event.id}"><span class="timeline-index">${index + 1}</span><time>${event.time}</time>${unlocked ? `<img src="${exhibit.artifactImage}" alt="">` : `<div class="timeline-card-lock" aria-hidden="true">◇</div>`}<div><span class="clue-meta">${status}</span><h4>${unlocked ? event.title : "Unrecovered event"}</h4><p>${unlocked ? `Source: ${event.source}` : "Restore its exhibit memory to reveal this moment."}</p></div></article>`;
+        }).join("")}
+      </div></div><footer><span>${placedEvents.length} event${placedEvents.length === 1 ? "" : "s"} placed on the board</span><button class="button button-primary" data-panel="case">Open Timeline Board</button></footer></section>`;
   }
 
   function openJournal(tab = "clues") {
+    markJournalTabSeen(tab);
     openModal(journalMarkup(tab));
+    updateNotificationBadges();
   }
 
   function clueTitle(id) {
@@ -893,11 +958,13 @@
     selectedTimelineEvent = null;
     openModal(caseMarkup());
     bindCaseInteractions();
+    updateNotificationBadges();
   }
 
   function refreshCase() {
     modalRoot.innerHTML = caseMarkup();
     bindCaseInteractions();
+    updateNotificationBadges();
     requestAnimationFrame(() => $(".case-modal", modalRoot)?.focus?.());
   }
 
@@ -1040,8 +1107,9 @@
     }
     const tab = event.target.closest("[data-journal-tab]");
     if (tab) {
+      markJournalTabSeen(tab.dataset.journalTab);
       $$("[data-journal-tab]", modalRoot).forEach((item) => { item.setAttribute("aria-selected", String(item === tab)); item.tabIndex = item === tab ? 0 : -1; });
-      $("#journal-content", modalRoot).innerHTML = journalContent(tab.dataset.journalTab); saveState(); return;
+      $("#journal-content", modalRoot).innerHTML = journalContent(tab.dataset.journalTab); updateNotificationBadges(); return;
     }
     const replay = event.target.closest("[data-replay]"); if (replay) return openMemory(replay.dataset.replay);
     const eventCard = event.target.closest("[data-event-card]");

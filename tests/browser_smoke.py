@@ -116,6 +116,8 @@ def main():
         assert page.locator("#player-sprite").evaluate("el => getComputedStyle(el).height") == "158px"
         assert page.locator("#player-sprite").evaluate("el => getComputedStyle(el).backgroundPositionY") == "calc(100% + 7px)"
         assert page.locator(".hud-actions .icon-button").all_inner_texts() == ["Clues", "Journal", "Map", "Menu"]
+        assert page.locator('[data-panel="journal"]').get_attribute("data-notification") == "false"
+        assert page.locator('[data-panel="case"]').get_attribute("data-notification") == "false"
         assert "menu.png" in page.locator(".hud-icon-menu").evaluate("el => getComputedStyle(el).backgroundImage")
         assert page.get_by_role("heading", name="Main Gallery").is_visible()
         typography = page.evaluate("""
@@ -235,7 +237,12 @@ def main():
 
         restore_memory(page, "raincoat", check_perspectives=True)
 
+        assert page.locator('[data-panel="journal"]').get_attribute("data-notification") == "true"
+        assert page.locator('[data-panel="case"]').get_attribute("data-notification") == "true"
         page.get_by_role("button", name="Open journal").click()
+        assert page.locator('[data-journal-tab="clues"]').get_attribute("data-notification") == "false"
+        assert page.locator('[data-journal-tab="memories"]').get_attribute("data-notification") == "true"
+        assert page.locator('[data-journal-tab="timeline"]').get_attribute("data-notification") == "true"
         page.get_by_role("tab", name="Memories").click()
         page.screenshot(path="/tmp/museum-journal-memory.png", full_page=True)
         page.set_viewport_size({"width": 620, "height": 900})
@@ -263,6 +270,16 @@ def main():
         """)
         assert replay_contrast >= 4.5, replay_contrast
         assert "auditor-journal.png" in page.locator(".journal-paper").evaluate("el => getComputedStyle(el).backgroundImage")
+        page.get_by_role("tab", name="Timeline").click()
+        assert page.locator(".journal-timeline-card").count() == 7
+        assert page.locator(".journal-timeline-card.is-unlocked").count() == 1
+        assert page.locator(".journal-timeline-section > header .clue-meta").evaluate("el => getComputedStyle(el).color") == "rgb(72, 39, 47)"
+        assert page.locator(".journal-timeline-card.is-locked .clue-meta").first.evaluate("el => getComputedStyle(el).color") == "rgb(216, 198, 208)"
+        assert page.locator(".journal-timeline").evaluate("el => el.scrollWidth > el.clientWidth")
+        page.locator(".journal-timeline").evaluate("el => { el.scrollLeft = 300; }")
+        assert page.locator(".journal-timeline").evaluate("el => el.scrollLeft > 0")
+        assert page.locator('[data-panel="journal"]').get_attribute("data-notification") == "false"
+        page.get_by_role("tab", name="Memories").click()
         page.get_by_role("button", name="Replay").click()
         assert page.get_by_role("tab", name="Restored Truth").get_attribute("aria-selected") == "true"
         assert page.locator(".investigation-tools").count() == 0
@@ -295,6 +312,10 @@ def main():
         page.get_by_role("button", name="Close panel").click()
         page.get_by_role("button", name="Open journal").click()
         assert page.get_by_text("A Pattern of Protection", exact=True).is_visible()
+        assert page.locator('[data-journal-tab="people"]').get_attribute("data-notification") == "true"
+        page.get_by_role("tab", name="People").click()
+        assert page.locator(".person-file").first.evaluate("el => parseFloat(getComputedStyle(el).paddingTop)") >= 12
+        page.get_by_role("tab", name="Clues").click()
         page.set_viewport_size({"width": 620, "height": 900})
         page.screenshot(path="/tmp/museum-journal-clues-narrow.png", full_page=True)
         first_clue = page.locator(".artifact-clue-grid .clue-card").first

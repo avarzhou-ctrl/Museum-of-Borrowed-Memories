@@ -312,6 +312,10 @@ def main():
         page.get_by_role("button", name="Open journal").click()
         assert page.get_by_role("tab").all_inner_texts() == ["Clues", "People", "Memories", "Timeline"]
         assert page.locator("#notes-area").count() == 0
+        page.get_by_role("tab", name="People").click()
+        page.screenshot(path="/tmp/museum-journal-people.png", full_page=True)
+        page.get_by_role("tab", name="Timeline").click()
+        page.screenshot(path="/tmp/museum-journal-timeline.png", full_page=True)
 
         # Every generated project asset used by the interface loaded successfully.
         page.get_by_role("button", name="Close panel").click()

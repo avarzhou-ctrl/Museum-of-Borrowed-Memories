@@ -108,9 +108,12 @@ button:focus-visible, input:focus-visible, select:focus-visible, [tabindex]:focu
 .objective { max-width: 350px; margin: .35rem 0 0; color: #d3c4d2; font: 1rem var(--serif); }
 .objective::before { content: "✦"; margin-right: .5rem; color: var(--gold); }
 .hud-actions { display: flex; gap: .5rem; }
-.icon-button { display: grid; place-items: center; min-width: 62px; padding: 0; border: 0; color: #ccb9bf; background: transparent; font: .82rem/1 var(--sans); cursor: pointer; }
+.icon-button { position: relative; display: grid; place-items: center; min-width: 62px; padding: 0; border: 0; color: #ccb9bf; background: transparent; font: .82rem/1 var(--sans); cursor: pointer; }
 .icon-button span { display: grid; place-items: center; width: 48px; height: 48px; margin-bottom: .05rem; border: 0; border-radius: 50%; color: transparent; background-color: transparent; background-position: center; background-repeat: no-repeat; background-size: contain; filter: drop-shadow(0 3px 6px #000) drop-shadow(0 0 3px rgb(221 170 103 / 45%)); box-shadow: 0 0 4px rgb(221 170 103 / 32%); transition: filter .2s, box-shadow .2s, transform .2s; }
 .icon-button:hover span, .icon-button:focus-visible span { filter: drop-shadow(0 3px 6px #000) drop-shadow(0 0 5px rgb(255 205 132 / 78%)); box-shadow: 0 0 7px rgb(255 205 132 / 55%); transform: translateY(-1px) scale(1.035); }
+.icon-button[data-notification="true"]::after, .tab[data-notification="true"]::after { content: "!"; position: absolute; z-index: 4; display: grid; place-items: center; width: 17px; height: 17px; border: 1px solid #f0c982; border-radius: 50%; color: #2b1822; background: #efc879; box-shadow: 0 0 9px rgb(242 190 104 / 72%); font: 800 .68rem/1 var(--sans); animation: notification-breathe 1.8s ease-in-out infinite alternate; }
+.icon-button[data-notification="true"]::after { right: 1px; top: -2px; }
+@keyframes notification-breathe { to { box-shadow: 0 0 14px rgb(250 201 118 / 92%); transform: translateY(-1px); } }
 .hud-icon-menu { background-image: url("assets/ui/menu.png"); }.hud-icon-journal { background-image: url("assets/ui/journal.png"); }.hud-icon-clues { background-image: url("assets/ui/clues.png"); }.hud-icon-map { background-image: url("assets/ui/map.png"); }
 .progress-card { position: absolute; z-index: 90; left: 1.7rem; top: 46%; display: grid; gap: .25rem; width: 150px; padding: .8rem 1rem; border-left: 1px solid rgb(199 161 106 / 50%); background: linear-gradient(90deg, rgb(9 7 14 / 80%), transparent); font: .9rem var(--serif); }
 .progress-card .butterfly { width: 36px; height: 36px; color: transparent; background: url("assets/ui/clues.png") center / contain no-repeat; filter: drop-shadow(0 3px 7px #000); font-size: 0; }.progress-card span:not(.butterfly) { color: var(--gold-bright); font: 1rem/1.2 var(--sans); }
@@ -238,7 +241,8 @@ kbd { padding: .08rem .34rem; border: 1px solid #746173; border-bottom-width: 2p
 .clue-reveal { display: grid; grid-template-columns: 110px 1fr; gap: 1.2rem; align-items: center; margin: 1rem 0; padding: 1.2rem; border: 1px solid rgb(199 161 106 / 40%); background: linear-gradient(120deg, #bda98e, #d8c5a9); color: #2e2027; }.clue-seal { display: grid; place-items: center; width: 90px; height: 90px; border: 1px solid #6c4b51; border-radius: 50%; font: 2rem var(--serif); }
 
 /* Journal, case board, map, menu, accusation, endings */
-.tabs { display: flex; gap: .25rem; padding: 0 1.4rem; border-bottom: 1px solid #4d3b4c; }.tab { padding: .7rem 1rem; border: 0; border-bottom: 2px solid transparent; color: #ad9daa; background: transparent; cursor: pointer; }.tab[aria-selected="true"] { color: var(--gold-bright); border-bottom-color: var(--gold); }
+.tabs { display: flex; gap: .25rem; padding: 0 1.4rem; border-bottom: 1px solid #4d3b4c; }.tab { position: relative; padding: .7rem 1rem; border: 0; border-bottom: 2px solid transparent; color: #ad9daa; background: transparent; cursor: pointer; }.tab[aria-selected="true"] { color: var(--gold-bright); border-bottom-color: var(--gold); }
+.tab[data-notification="true"]::after { right: -.05rem; top: .18rem; width: 14px; height: 14px; font-size: .58rem; }
 .tab-panel { min-height: 460px; padding: 1.4rem; }.journal-paper { margin: 0 1.4rem 1.4rem; border: 1px solid #6d574e; color: #33242a; background: linear-gradient(90deg, rgb(110 74 73 / 15%) 1px, transparent 1px), #d4c0a3; background-size: 28px 100%; box-shadow: inset 22px 0 28px rgb(73 45 45 / 15%); }
 .clue-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: .8rem; }.clue-card { min-height: 150px; padding: 1rem; border: 1px solid #8f735f; background: rgb(242 222 189 / 52%); transform: rotate(var(--tilt, 0deg)); }.clue-card h3 { margin: 0 0 .35rem; font: 600 1.2rem var(--serif); }.clue-card p { margin: .35rem 0; line-height: 1.35; }.clue-meta { color: #6e5152; font-size: .72rem; text-transform: uppercase; letter-spacing: .08em; }.empty-state { display: grid; place-items: center; min-height: 260px; color: #806b68; font: 1.2rem var(--serif); text-align: center; }
 .people-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; }.person-card { padding: 1rem; border: 1px solid #9b7c67; background: rgb(246 225 190 / 45%); }.person-card h3 { margin: 0; font: 600 1.25rem var(--serif); }.person-card .role { color: #765759; font-size: .76rem; }.person-card blockquote { margin: .7rem 0; font-family: var(--serif); }.person-card .reveal { padding-top: .6rem; border-top: 1px solid #9b7c67; font-size: .84rem; }
@@ -370,6 +374,7 @@ button.observation-card.is-known { width: 100%; cursor: pointer; }
 .person-card { display: grid; grid-template-columns: 150px 1fr; gap: 1rem; min-height: 265px; box-shadow: 0 7px 16px rgb(70 44 44 / 12%); }
 .person-portrait { width: 150px; height: 215px; object-fit: cover; object-position: 50% 20%; border: 5px solid #6f554d; outline: 1px solid #b29678; filter: sepia(.1) saturate(.82); }
 .person-file { min-width: 0; }
+.journal-paper .person-file { padding-top: 1.15rem; }
 .person-file .file-count { display: block; margin-top: .35rem; color: #74565a; font: .7rem var(--sans); text-transform: uppercase; letter-spacing: .08em; }
 .person-card.has-reveal .person-portrait { filter: none; box-shadow: 0 0 15px rgb(123 90 116 / 32%); }
 .known-contradictions { display: grid; gap: .35rem; margin: .55rem 0; padding: 0; list-style: none; }
@@ -446,6 +451,29 @@ button.observation-card.is-known { width: 100%; cursor: pointer; }
 }
 .journal-paper .puzzle-button:hover, .journal-paper .puzzle-button:focus-visible { color: #fff8e8; border-color: #d2a267; background: linear-gradient(#59364b, #321c2c); }
 .memory-card .clue-card-art { filter: brightness(1.2) contrast(1.1) saturate(.9); }
+
+.journal-timeline-section { min-width: 0; }
+.journal-timeline-section > header, .journal-timeline-section > footer { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.journal-timeline-section > header { margin: 0 0 1rem; }
+.journal-timeline-section > header h3 { margin: .2rem 0 0; color: #2b191e; font: 600 1.6rem var(--serif); }
+.journal-timeline-section > header > span, .journal-timeline-section > header .clue-meta, .journal-timeline-section > footer > span { color: #48272f; font: 700 .72rem var(--sans); letter-spacing: .06em; text-transform: uppercase; }
+.journal-timeline { overflow-x: auto; overflow-y: hidden; padding: 1.7rem 1rem 1.3rem; border: 1px solid #5c424e; background: rgb(24 14 25 / 88%); box-shadow: inset 0 0 30px rgb(0 0 0 / 38%); scroll-behavior: smooth; scroll-snap-type: x proximity; scrollbar-color: #9c704f #271826; scrollbar-width: thin; }
+.journal-timeline:focus-visible { outline-offset: 4px; }
+.journal-timeline-track { position: relative; display: flex; align-items: stretch; gap: 1rem; width: max-content; min-width: 100%; padding: .8rem .3rem .5rem; }
+.journal-timeline-track::before { content: ""; position: absolute; left: 0; right: 0; top: 1.35rem; height: 2px; background: linear-gradient(90deg, #70404a, #c79561 45%, #70404a); box-shadow: 0 0 7px rgb(198 139 91 / 32%); }
+.journal-timeline-card { position: relative; z-index: 1; display: flex; flex: 0 0 245px; flex-direction: column; min-height: 315px; padding: 3rem 1.35rem 2.6rem; color: #302026; background: #cbb28c url("assets/ui/generated/evidence-card.png") center / 100% 100% no-repeat; box-shadow: 0 7px 13px rgb(0 0 0 / 45%); scroll-snap-align: start; }
+.journal-timeline-card:nth-child(even) { transform: translateY(.35rem) rotate(.25deg); }
+.journal-timeline-card .timeline-index { position: absolute; left: 50%; top: -.35rem; display: grid; place-items: center; width: 30px; height: 30px; border: 2px solid #caa16c; border-radius: 50%; color: #f6dfb6; background: #311d2b; box-shadow: 0 0 10px #000; transform: translateX(-50%); font: 700 .72rem var(--sans); }
+.journal-timeline-card time { color: #7c2632; font: 800 .72rem var(--sans); letter-spacing: .05em; }
+.journal-timeline-card img, .timeline-card-lock { width: 100%; height: 108px; margin: .6rem 0 .75rem; border: 1px solid #76564d; object-fit: cover; }
+.timeline-card-lock { display: grid; place-items: center; color: #9d8290; background: rgb(26 17 29 / 78%); font: 2rem var(--serif); }
+.journal-timeline-card h4 { margin: .3rem 0 .4rem; color: #2d1a20; font: 600 1.08rem/1.15 var(--serif); }
+.journal-timeline-card p { margin: 0; color: #5b3f43; font-size: .72rem; line-height: 1.4; }
+.journal-timeline-card .clue-meta { color: #48272f; }
+.journal-timeline-card.is-aligned { box-shadow: 0 0 0 2px #6f8b66, 0 7px 13px rgb(0 0 0 / 45%); }
+.journal-timeline-card.is-locked { color: #b7a4af; background: #211625 url("assets/ui/generated/victorian-panel.png") center / 100% 100% no-repeat; filter: saturate(.65); }
+.journal-timeline-card.is-locked time, .journal-timeline-card.is-locked h4, .journal-timeline-card.is-locked p, .journal-timeline-card.is-locked .clue-meta { color: #d8c6d0; }
+.journal-timeline-section > footer { margin-top: 1rem; }
 
 .puzzle-box, .fragment-bank, .contradiction-form {
   border: 0;
@@ -592,6 +620,9 @@ h1, h2, h3, h4,
   .journal-paper { margin-inline: .5rem; padding: 2.6rem 1.35rem 2.2rem; background-size: 100% 100%; }
   .journal-paper .clue-grid { grid-template-columns: 1fr; }
   .journal-paper .clue-card, .journal-paper .person-card { padding: 3rem 1.55rem 4.2rem; }
+  .journal-paper .person-file { padding-top: .8rem; }
+  .journal-timeline-section > header, .journal-timeline-section > footer { align-items: flex-start; flex-direction: column; }
+  .journal-timeline-card { flex-basis: 220px; }
   .case-board { padding: 1rem; }
   .investigation-tools { gap: .2rem; }
   .investigation-tools button { width: 62px; }
