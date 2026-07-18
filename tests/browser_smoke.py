@@ -1,4 +1,4 @@
-"""Full browser smoke test for the preliminary investigation loop."""
+"""Full browser smoke test for the Observe → Connect → Restore investigation loop."""
 
 from pathlib import Path
 from playwright.sync_api import sync_playwright
@@ -8,35 +8,76 @@ BASE_URL = "http://127.0.0.1:4173"
 SHOT = Path("/tmp/museum-complete.png")
 
 
-def restore_memory(page, exhibit, puzzle, choice, check_perspectives=False):
+INVESTIGATIONS = {
+    "raincoat": (("wet-hem", "familiar-trace"), ("returns", "searches", "recognized")),
+    "teacup": (("warm-fracture", "cracked-words"), ("confronts", "sharpens", "condemns")),
+    "umbrella": (("wet-tip", "moved-tag"), ("taken", "wetted", "planted")),
+    "elevator": (("hidden-control", "mara-print"), ("presses", "opens", "steps-aside")),
+    "musicbox": (("missing-tooth", "answering-phrase"), ("phrase", "locks", "awakens")),
+    "guestbook": (("covered-paragraph", "altered-copy"), ("promised", "signed", "transferred")),
+    "orchard": (("elian-reflection", "living-pulse"), ("melody", "bends", "imprisoned")),
+}
+
+
+def restore_memory(page, exhibit, check_perspectives=False):
     print(f"Restoring {exhibit}...", flush=True)
     target = page.locator(f'[data-exhibit="{exhibit}"]')
     target.evaluate("el => el.click()")
-    assert page.locator("#player").evaluate("el => el.classList.contains('is-interacting')")
-    assert "interact-" in page.locator("#player-sprite").evaluate("el => getComputedStyle(el).backgroundImage")
+    if exhibit == "raincoat":
+        assert page.locator("#player").evaluate("el => el.classList.contains('is-interacting')")
+        assert "interact-" in page.locator("#player-sprite").evaluate("el => getComputedStyle(el).backgroundImage")
     page.locator(".viewer-modal").wait_for()
     if exhibit == "raincoat":
         page.screenshot(path="/tmp/museum-viewer.png", full_page=True)
-    puzzle(page)
-    page.locator(".memory-visual").wait_for()
-    assert f"{exhibit}.png" in page.locator(".memory-visual").evaluate("el => getComputedStyle(el).backgroundImage")
+    assert page.get_by_text("Observe", exact=True).is_visible()
+    page.wait_for_function("document.querySelector('.artifact-hero')?.complete && document.querySelector('.artifact-hero').naturalWidth > 0")
+    assert page.locator(".artifact-hero").evaluate("img => img.complete && img.naturalWidth > 0")
+    tool_icons = page.locator("[data-investigation-tool] img")
+    assert tool_icons.count() == 3
+    assert tool_icons.evaluate_all("icons => icons.every(icon => icon.complete && icon.naturalWidth > 0 && icon.src.includes('/assets/ui/generated/tool-'))")
+    active_tool = page.locator('[data-investigation-tool][aria-pressed="true"]')
+    assert active_tool.evaluate("el => getComputedStyle(el).backgroundColor") == "rgba(0, 0, 0, 0)"
+    assert "drop-shadow" in active_tool.locator("img").evaluate("el => getComputedStyle(el).filter")
+
+    for tool in ("Eye", "Hand", "Magnifier"):
+        page.get_by_role("button", name=f"Use {tool}").click()
+        page.locator("[data-observation-hotspot]").click()
+
+    assert page.locator(".observation-card.is-known").count() == 3
+    page.get_by_role("button", name="Continue to Connect").click()
+    assert page.locator(".investigation-tools").count() == 0
+    connection, fragments = INVESTIGATIONS[exhibit]
+    for observation in connection:
+        page.locator(f'[data-connect-observation="{observation}"]').click()
+    page.get_by_role("button", name="Test connection").click()
+    assert page.locator(".challenged-statement.is-disproven").is_visible()
+    assert page.locator(".connection-thread-preview").count() == 0
+    assert page.locator(".challenged-statement.is-disproven").evaluate("el => getComputedStyle(el, '::after').borderTopWidth") == "1px"
+    if exhibit == "raincoat":
+        page.screenshot(path="/tmp/museum-connect.png", full_page=True)
+    page.get_by_role("button", name="Continue to Restore").click()
+
+    assert f"{exhibit}.png" in page.locator(".restore-memory").evaluate("el => getComputedStyle(el).backgroundImage")
+    for index, fragment in enumerate(fragments):
+        page.locator(f'[data-memory-fragment="{fragment}"]').click()
+        page.locator(f'[data-fragment-slot="{index}"]').click()
+    if exhibit == "raincoat":
+        page.screenshot(path="/tmp/museum-restore.png", full_page=True)
+    page.get_by_role("button", name="Restore memory").click()
+
+    assert page.get_by_role("tab", name="Object Memory").get_attribute("aria-selected") == "true"
+    assert page.locator(".investigation-tools").count() == 0
+    page.get_by_role("button", name="Continue to Human Recollection").click()
+    assert page.get_by_role("tab", name="Human Recollection").get_attribute("aria-selected") == "true"
     if check_perspectives:
-        human = page.get_by_role("tab", name="Human Recollection")
-        human.click()
-        assert human.get_attribute("aria-selected") == "true"
         page.screenshot(path="/tmp/museum-memory-perspective.png", full_page=True)
-        page.get_by_role("tab", name="Object Memory").click()
-    restored_started = page.evaluate("performance.now()")
-    page.get_by_role("button", name=choice, exact=True).click()
+    page.get_by_role("button", name="Continue to Restored Truth").click()
     assert page.get_by_role("tab", name="Restored Truth").get_attribute("aria-selected") == "true"
-    return_button = page.get_by_role("button", name="Return to gallery")
+    page.wait_for_function("document.querySelector('[data-claim-clue]') && !document.querySelector('[data-claim-clue]').disabled")
     if exhibit == "raincoat":
-        page.wait_for_timeout(1500)
-        assert return_button.count() == 0
-    return_button.wait_for()
-    if exhibit == "raincoat":
-        assert page.evaluate("performance.now()") - restored_started >= 3000
-    return_button.click()
+        page.screenshot(path="/tmp/museum-truth.png", full_page=True)
+    page.get_by_role("button", name="Record restored clue").click()
+    page.get_by_role("button", name="Return to gallery").click()
 
 
 def main():
@@ -48,6 +89,10 @@ def main():
         page.on("pageerror", lambda error: (errors.append(str(error)), print(f"PAGE ERROR: {error}", flush=True)))
         page.on("console", lambda message: print(f"CONSOLE {message.type}: {message.text}", flush=True) if message.type == "error" else None)
         page.goto(BASE_URL)
+        assert page.locator('link[href^="styles.css?v="]').count() == 1
+        assert page.locator('script[src^="src/data.js?v="]').count() == 1
+        assert page.locator('script[src^="src/room-collision.js?v="]').count() == 1
+        assert page.locator('script[src^="src/game.js?v="]').count() == 1
         page.evaluate("localStorage.clear(); sessionStorage.clear()")
         page.reload()
 
@@ -69,11 +114,87 @@ def main():
         assert page.locator("#gallery.painted-gallery").is_visible()
         assert page.locator("#player").evaluate("el => getComputedStyle(el).width") == "100px"
         assert page.locator("#player-sprite").evaluate("el => getComputedStyle(el).height") == "158px"
+        assert page.locator("#player-sprite").evaluate("el => getComputedStyle(el).backgroundPositionY") == "calc(100% + 7px)"
         assert page.locator(".hud-actions .icon-button").all_inner_texts() == ["Clues", "Journal", "Map", "Menu"]
         assert "menu.png" in page.locator(".hud-icon-menu").evaluate("el => getComputedStyle(el).backgroundImage")
         assert page.get_by_role("heading", name="Main Gallery").is_visible()
-        assert page.locator('[data-exhibit="teacup"]').evaluate("el => el.style.getPropertyValue('--x')") == "25%"
-        assert page.evaluate("document.elementFromPoint(innerWidth * .25, innerHeight * .82).closest('[data-exhibit]')?.dataset.exhibit") == "teacup"
+        typography = page.evaluate("""
+            () => {
+              const root = getComputedStyle(document.documentElement);
+              const family = selector => getComputedStyle(document.querySelector(selector)).fontFamily;
+              const size = selector => parseFloat(getComputedStyle(document.querySelector(selector)).fontSize);
+              return {
+                tokens: {
+                  display: root.getPropertyValue('--display').trim(),
+                  serif: root.getPropertyValue('--serif').trim(),
+                  sans: root.getPropertyValue('--sans').trim()
+                },
+                families: {
+                  brand: family('.gallery-brand'), room: family('.location-block h2'),
+                  objective: family('.objective'), hud: family('.icon-button'),
+                  progressLabel: family('.progress-card strong'), progressValue: family('#memory-count'),
+                  movement: family('.controls-hint'), key: family('.controls-hint kbd'),
+                  prompt: family('.interaction-prompt')
+                },
+                sizes: { hud: size('.icon-button'), movement: size('.controls-hint') }
+              };
+            }
+        """)
+        for role in ("brand", "room", "progressLabel"):
+            assert typography["families"][role] == typography["tokens"]["display"], (role, typography)
+        assert typography["families"]["objective"] == typography["tokens"]["serif"]
+        for role in ("hud", "progressValue", "movement", "key", "prompt"):
+            assert typography["families"][role] == typography["tokens"]["sans"], (role, typography)
+        assert typography["sizes"]["hud"] >= 13.12
+        assert typography["sizes"]["movement"] >= 13.12
+        assert page.locator(".controls-hint").evaluate("el => [getComputedStyle(el).borderStyle, getComputedStyle(el).backgroundImage, getComputedStyle(el).boxShadow]") == ["none", "none", "none"]
+        expected_hitboxes = {
+            "raincoat": ("17.97%", "58.40%", "11.90vw", "44.31vh"),
+            "teacup": ("28.41%", "80.34%", "9.69vw", "28.48vh"),
+            "umbrella": ("35.23%", "55.84%", "8.01vw", "33.69vh"),
+            "orchard": ("49.52%", "49.31%", "13.88vw", "32.94vh"),
+            "musicbox": ("63.01%", "57.28%", "8.55vw", "28.06vh"),
+            "guestbook": ("75.87%", "70.94%", "18.36vw", "31.35vh"),
+            "elevator": ("93.09%", "75.45%", "9.99vw", "36.77vh"),
+        }
+        for exhibit, bounds in expected_hitboxes.items():
+            target = page.locator(f'[data-exhibit="{exhibit}"]')
+            assert target.evaluate("el => ['--x', '--y', '--hit-w', '--hit-h'].map(name => el.style.getPropertyValue(name))") == list(bounds)
+            assert target.evaluate("el => getComputedStyle(el).borderRadius") == "0px"
+
+        collision_report = page.evaluate("""
+            () => {
+              const api = window.MUSEUM_COLLISION_API;
+              return {
+                exhibitIds: api.config.obstacles.filter(item => item.exhibitId).map(item => item.exhibitId).sort(),
+                obstacleCount: api.config.obstacles.length,
+                allEdgesBlocked: api.config.obstacles.every(obstacle => {
+                  const vertices = obstacle.polygon;
+                  const edgeCenters = vertices.map((point, index) => {
+                    const next = vertices[(index + 1) % vertices.length];
+                    return { x: (point.x + next.x) / 2, y: (point.y + next.y) / 2 };
+                  });
+                  const center = vertices.reduce((sum, point) => ({
+                    x: sum.x + point.x / vertices.length,
+                    y: sum.y + point.y / vertices.length
+                  }), { x: 0, y: 0 });
+                  return [...vertices, ...edgeCenters, center].every(point => !api.isWalkablePoint(point));
+                }),
+                defaultPositionOpen: api.isWalkablePoint({ x: 50, y: 78 })
+              };
+            }
+        """)
+        assert collision_report["exhibitIds"] == ["elevator", "guestbook", "musicbox", "orchard", "raincoat", "teacup", "umbrella"]
+        assert collision_report["obstacleCount"] >= 12
+        assert collision_report["allEdgesBlocked"]
+        assert collision_report["defaultPositionOpen"]
+
+        page.keyboard.press("F8")
+        assert page.locator("#collision-debug-overlay").is_visible()
+        assert page.locator("[data-debug-obstacle]").count() == collision_report["obstacleCount"]
+        assert page.locator("[data-debug-feet]").get_attribute("cx") == "50"
+        page.keyboard.press("F8")
+        assert page.locator("#collision-debug-overlay").is_hidden()
 
         page.keyboard.down("ArrowUp")
         page.wait_for_timeout(120)
@@ -95,60 +216,64 @@ def main():
         page.keyboard.down("ArrowDown")
         page.wait_for_timeout(120)
         page.keyboard.up("ArrowDown")
-        page.wait_for_timeout(50)
+        page.wait_for_function("getComputedStyle(document.querySelector('#player-sprite')).backgroundImage.includes('idle-front.png')")
         assert page.locator("#player").get_attribute("data-direction") == "front"
-        assert "idle-front.png" in page.locator("#player-sprite").evaluate("el => getComputedStyle(el).backgroundImage")
+        front_idle_image = page.locator("#player-sprite").evaluate("el => getComputedStyle(el).backgroundImage")
+        assert "idle-front.png" in front_idle_image, front_idle_image
         page.keyboard.down("ArrowUp")
         page.wait_for_timeout(1000)
         page.keyboard.up("ArrowUp")
         page.wait_for_timeout(50)
         player_y = page.locator("#player").evaluate("el => parseFloat(el.style.getPropertyValue('--player-y'))")
-        assert player_y >= 66, f"Player crossed the Glass Orchard collision: {player_y}"
+        assert player_y >= 66.55, f"Player's feet anchor crossed the Glass Orchard obstacle: {player_y}"
+        page.keyboard.down("ArrowLeft")
+        page.wait_for_timeout(1000)
+        page.keyboard.up("ArrowLeft")
+        page.wait_for_timeout(50)
+        player_x = page.locator("#player").evaluate("el => parseFloat(el.style.getPropertyValue('--player-x'))")
+        assert player_x >= 39.9, f"Player's feet anchor crossed the Silver Umbrella obstacle: {player_x}"
 
-        restore_memory(
-            page,
-            "raincoat",
-            lambda p: [p.locator(".droplet").first.click() for _ in range(5)],
-            "Celeste Wren",
-            check_perspectives=True,
-        )
+        restore_memory(page, "raincoat", check_perspectives=True)
 
         page.get_by_role("button", name="Open journal").click()
         page.get_by_role("tab", name="Memories").click()
+        page.screenshot(path="/tmp/museum-journal-memory.png", full_page=True)
+        page.set_viewport_size({"width": 620, "height": 900})
+        page.screenshot(path="/tmp/museum-journal-memory-narrow.png", full_page=True)
+        memory_card_box = page.locator(".memory-card").bounding_box()
+        replay_box = page.get_by_role("button", name="Replay").bounding_box()
+        assert memory_card_box["y"] + memory_card_box["height"] - (replay_box["y"] + replay_box["height"]) >= 48
+        assert page.locator(".journal-paper .clue-grid").evaluate("el => getComputedStyle(el).gridTemplateColumns.split(' ').length") == 1
+        page.set_viewport_size({"width": 1440, "height": 900})
+        replay_contrast = page.get_by_role("button", name="Replay").evaluate("""
+            el => {
+              const parse = value => value.match(/[\\d.]+/g).slice(0, 3).map(Number);
+              const luminance = rgb => {
+                const channels = rgb.map(value => {
+                  const normalized = value / 255;
+                  return normalized <= .03928 ? normalized / 12.92 : Math.pow((normalized + .055) / 1.055, 2.4);
+                });
+                return .2126 * channels[0] + .7152 * channels[1] + .0722 * channels[2];
+              };
+              const style = getComputedStyle(el);
+              const foreground = luminance(parse(style.color));
+              const background = luminance(parse(style.backgroundColor));
+              return (Math.max(foreground, background) + .05) / (Math.min(foreground, background) + .05);
+            }
+        """)
+        assert replay_contrast >= 4.5, replay_contrast
+        assert "auditor-journal.png" in page.locator(".journal-paper").evaluate("el => getComputedStyle(el).backgroundImage")
         page.get_by_role("button", name="Replay").click()
         assert page.get_by_role("tab", name="Restored Truth").get_attribute("aria-selected") == "true"
+        assert page.locator(".investigation-tools").count() == 0
         page.get_by_role("tab", name="Human Recollection").click()
         page.get_by_role("button", name="Close panel").click()
 
-        def rotate(p):
-            p.locator("#rotation").fill("72")
-            p.get_by_role("button", name="Align cracks").click()
-
-        restore_memory(page, "teacup", rotate, "Mara and Elian argue")
-
-        def toggle(p):
-            for _ in range(3):
-                p.locator("[data-toggle-umbrella]").click()
-
-        restore_memory(page, "umbrella", toggle, "To frame Celeste")
-
-        def sequence(p):
-            for number in ["1", "3", "1", "2"]:
-                p.locator(f'[data-sequence="{number}"]').click()
-
-        restore_memory(page, "elevator", sequence, "Mara entering the archive")
-
-        def melody(p):
-            for note in ["D", "A", "C", "B"]:
-                p.locator(f'[data-note="{note}"]').click()
-
-        restore_memory(page, "musicbox", melody, "The Glass Orchard")
-        restore_memory(
-            page,
-            "guestbook",
-            lambda p: p.locator('[data-signature="permanent"]').click(),
-            "A disguised memory transfer",
-        )
+        restore_memory(page, "teacup")
+        restore_memory(page, "umbrella")
+        restore_memory(page, "elevator")
+        restore_memory(page, "musicbox")
+        restore_memory(page, "guestbook")
 
         print("Proving contradictions...", flush=True)
         page.get_by_role("button", name="Open case board").click()
@@ -164,18 +289,22 @@ def main():
             page.get_by_role("button", name="Pin three-part connection").click()
         page.screenshot(path="/tmp/museum-case-board.png", full_page=True)
         assert page.locator(".evidence-node").count() == 9
+        assert "case-board.png" in page.locator(".case-board").evaluate("el => getComputedStyle(el).backgroundImage")
+        assert page.locator(".evidence-node").first.evaluate("el => getComputedStyle(el).backgroundImage.includes('evidence-card.png')")
+        assert page.locator(".thread-line").first.evaluate("el => getComputedStyle(el).backgroundColor") == "rgb(143, 41, 55)"
         page.get_by_role("button", name="Close panel").click()
         page.get_by_role("button", name="Open journal").click()
         assert page.get_by_text("A Pattern of Protection", exact=True).is_visible()
+        page.set_viewport_size({"width": 620, "height": 900})
+        page.screenshot(path="/tmp/museum-journal-clues-narrow.png", full_page=True)
+        first_clue = page.locator(".artifact-clue-grid .clue-card").first
+        clue_box = first_clue.bounding_box()
+        related_box = first_clue.locator(":scope > .clue-meta").last.bounding_box()
+        assert clue_box["y"] + clue_box["height"] - (related_box["y"] + related_box["height"]) >= 48
+        page.set_viewport_size({"width": 1440, "height": 900})
         page.get_by_role("button", name="Close panel").click()
 
-        def match(p):
-            p.locator('[data-match="celeste"]').select_option("Celeste")
-            p.locator('[data-match="mara"]').select_option("Mara")
-            p.locator('[data-match="elian"]').select_option("Elian")
-            p.get_by_role("button", name="Return fragments").click()
-
-        restore_memory(page, "orchard", match, "He is alive inside the Orchard")
+        restore_memory(page, "orchard")
 
         print("Building timeline...", flush=True)
         page.get_by_role("button", name="Open case board").click()

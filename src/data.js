@@ -7,8 +7,22 @@ window.GAME_DATA = {
       phase: 1,
       description: "A child-sized yellow raincoat. Water gathers on its case although the gallery is dry.",
       property: "It remembers every person who left the museum crying.",
-      instruction: "Wipe five droplets from the glass.",
-      puzzle: "wipe",
+      investigation: {
+        statement: "Celeste: “I left before the storm.”",
+        observations: [
+          { id: "wet-hem", tool: "eye", label: "Rain on the inner hem", hotspotName: "Inspect the raincoat hem", detail: "Water beads inside the hem, where a sealed display could not have gathered it.", x: 48, y: 72, w: 18, h: 16 },
+          { id: "familiar-trace", tool: "hand", label: "A familiar trace on the sleeve", hotspotName: "Examine the raincoat sleeve", detail: "The wet sleeve carries Celeste’s violet perfume and the warmth of a recent touch.", x: 39, y: 52, w: 18, h: 20 },
+          { id: "fresh-repair", tool: "magnifier", label: "Fresh fibers in the lining", hotspotName: "Magnify the raincoat lining", detail: "New burgundy fibers snag inside a repair made after the case was catalogued.", x: 57, y: 58, w: 17, h: 18 }
+        ],
+        correctConnection: ["wet-hem", "familiar-trace"],
+        incorrectHint: "Find one detail that proves the coat was worn and another that identifies who touched it.",
+        deduction: "Celeste returned during the storm.",
+        fragments: [
+          { id: "returns", caption: "Celeste crosses the threshold during the storm." },
+          { id: "searches", caption: "She searches for the memory of her sister." },
+          { id: "recognized", caption: "The raincoat recognizes the familiar hand on its sleeve." }
+        ]
+      },
       artifactImage: "assets/artifacts/raincoat.png",
       memoryImage: "assets/memories/raincoat.png",
       memory: "A soaked figure crosses the threshold long after she claimed to have left. The raincoat trembles as the museum recognizes her.",
@@ -34,8 +48,22 @@ window.GAME_DATA = {
       phase: 1,
       description: "Porcelain painted with strawberries. The old tea ripples whenever a lie is spoken nearby.",
       property: "Its cracks have rearranged themselves into the shape of words.",
-      instruction: "Rotate the cup until the fractures align near 72°.",
-      puzzle: "rotate",
+      investigation: {
+        statement: "Mara: “I never spoke to Elian that night.”",
+        observations: [
+          { id: "rippling-tea", tool: "eye", label: "Tea rippling without movement", hotspotName: "Inspect the surface of the tea", detail: "The old tea trembles although the cup and table remain perfectly still.", x: 50, y: 39, w: 20, h: 15 },
+          { id: "warm-fracture", tool: "hand", label: "A fresh, warm fracture", hotspotName: "Touch the cracked handle", detail: "One fracture is warmer than the porcelain around it, as if a lie has just reopened it.", x: 65, y: 53, w: 18, h: 20 },
+          { id: "cracked-words", tool: "magnifier", label: "Words inside the newest crack", hotspotName: "Magnify the newest crack", detail: "The fracture holds two names—Elian and Mara—and the shape of the word ‘empty.’", x: 48, y: 57, w: 20, h: 18 }
+        ],
+        correctConnection: ["warm-fracture", "cracked-words"],
+        incorrectHint: "The useful pair must show that the crack is recent and preserve what was said.",
+        deduction: "Mara argued with Elian shortly before he vanished.",
+        fragments: [
+          { id: "confronts", caption: "Elian confronts Mara beside the service table." },
+          { id: "sharpens", caption: "Their voices sharpen and the old tea begins to ripple." },
+          { id: "condemns", caption: "Mara condemns his plan to empty the archive." }
+        ]
+      },
       artifactImage: "assets/artifacts/teacup.png",
       memoryImage: "assets/memories/teacup.png",
       memory: "Elian stands beside a service table. Mara's voice is low and furious: ‘You would empty every case for the sake of people who chose to forget.’",
@@ -61,8 +89,22 @@ window.GAME_DATA = {
       phase: 1,
       description: "An elegant silver umbrella with tiny moon charms and Celeste Wren’s initials on the handle.",
       property: "It remembers being carried into the wrong room.",
-      instruction: "Open and close the umbrella three times to loosen the hidden clasp.",
-      puzzle: "toggle",
+      investigation: {
+        statement: "Museum label: “The umbrella was found near Celeste.”",
+        observations: [
+          { id: "dry-grip", tool: "eye", label: "A completely dry grip", hotspotName: "Inspect the umbrella grip", detail: "The handle and wrist strap are dry despite the museum’s account of a storm-soaked owner.", x: 51, y: 28, w: 18, h: 18 },
+          { id: "wet-tip", tool: "hand", label: "Water only on the tip", hotspotName: "Touch the umbrella tip", detail: "The metal tip is wet and cold, but no water has traveled up the folded canopy.", x: 50, y: 76, w: 18, h: 16 },
+          { id: "moved-tag", tool: "magnifier", label: "A displaced provenance tag", hotspotName: "Magnify the initials and tag", detail: "Celeste’s initials are genuine, but the archive-corridor location was added in different ink.", x: 58, y: 43, w: 18, h: 18 }
+        ],
+        correctConnection: ["wet-tip", "moved-tag"],
+        incorrectHint: "Look for evidence that the umbrella’s location—and even its wetness—was manufactured.",
+        deduction: "The umbrella was planted to frame Celeste.",
+        fragments: [
+          { id: "taken", caption: "A museum attendant takes the umbrella from the donor cloakroom." },
+          { id: "wetted", caption: "Only its tip is pressed into rainwater." },
+          { id: "planted", caption: "It is placed beside Celeste’s belongings at 11:50." }
+        ]
+      },
       artifactImage: "assets/artifacts/umbrella.png",
       memoryImage: "assets/memories/umbrella.png",
       memory: "A gloved hand sets the umbrella beside Celeste's things at 11:50. Its wet tip points toward the archive corridor—not the door.",
@@ -88,8 +130,22 @@ window.GAME_DATA = {
       phase: 2,
       description: "A brass button in a velvet box. The number 13 is worn smooth by hands no guest remembers seeing.",
       property: "It remembers every fingerprint that has touched it.",
-      instruction: "Repeat the four-note pressure sequence: 1 · 3 · 1 · 2.",
-      puzzle: "sequence",
+      investigation: {
+        statement: "Mara: “I never entered the archive.”",
+        observations: [
+          { id: "hidden-control", tool: "eye", label: "A concealed thirteen", hotspotName: "Inspect the worn elevator numeral", detail: "The brass has been polished by repeated use, but only around the hidden number thirteen.", x: 50, y: 48, w: 19, h: 20 },
+          { id: "pressure-points", tool: "hand", label: "Four pressure points", hotspotName: "Feel the edge of the elevator control", detail: "Four shallow dents form a deliberate activation pattern around the button.", x: 51, y: 61, w: 24, h: 18 },
+          { id: "mara-print", tool: "magnifier", label: "Mara’s fresh fingerprint", hotspotName: "Magnify the fingerprints", detail: "Mara’s fresh print overlaps Jonah’s older print and carries gold archive dust.", x: 59, y: 42, w: 17, h: 19 }
+        ],
+        correctConnection: ["hidden-control", "mara-print"],
+        incorrectHint: "Connect the concealed route with the fresh evidence of who activated it.",
+        deduction: "Mara used Floor Thirteen while Jonah watched.",
+        fragments: [
+          { id: "presses", caption: "Mara presses the concealed four-point sequence." },
+          { id: "opens", caption: "The hidden elevator opens onto the archive." },
+          { id: "steps-aside", caption: "Jonah sees her and deliberately steps aside." }
+        ]
+      },
       artifactImage: "assets/artifacts/elevator.png",
       memoryImage: "assets/memories/elevator.png",
       memory: "Mara presses the hidden control. Jonah watches from the landing and steps aside. Gold dust clings to both their hands.",
@@ -115,8 +171,22 @@ window.GAME_DATA = {
       phase: 2,
       description: "A dark wood music box. Its ballerina always stops before the final turn.",
       property: "The missing note is not lost. It has been locked away.",
-      instruction: "Play the archive phrase: D · A · C · B.",
-      puzzle: "melody",
+      investigation: {
+        statement: "Museum label: “The missing note is ordinary damage.”",
+        observations: [
+          { id: "stopped-turn", tool: "eye", label: "A ballerina stopped before the final turn", hotspotName: "Inspect the ballerina", detail: "The figure always stops at the same point, waiting rather than failing.", x: 50, y: 33, w: 20, h: 22 },
+          { id: "missing-tooth", tool: "hand", label: "A deliberately removed cylinder tooth", hotspotName: "Feel the music cylinder", detail: "The gap is smooth and intentional; the missing note was extracted, not broken away.", x: 47, y: 57, w: 22, h: 17 },
+          { id: "answering-phrase", tool: "magnifier", label: "Four notes answered by the wall", hotspotName: "Magnify the engraved musical marks", detail: "Tiny marks spell D · A · C · B, and a mechanism inside the wall answers the phrase.", x: 62, y: 51, w: 19, h: 18 }
+        ],
+        correctConnection: ["missing-tooth", "answering-phrase"],
+        incorrectHint: "The missing note matters only when paired with evidence that something else answers it.",
+        deduction: "The melody is a key that activates the hidden archive.",
+        fragments: [
+          { id: "phrase", caption: "The four-note archive phrase is played." },
+          { id: "locks", caption: "Seven locks turn inside the museum walls." },
+          { id: "awakens", caption: "The Glass Orchard opens every glowing eye." }
+        ]
+      },
       artifactImage: "assets/artifacts/musicbox.png",
       memoryImage: "assets/memories/musicbox.png",
       memory: "Four notes pass down the archive corridor. Locks turn inside the walls. In the Orchard, every glass fruit opens its eye.",
@@ -142,8 +212,22 @@ window.GAME_DATA = {
       phase: 2,
       description: "Pink velvet, gold-edged pages, and signatures whose owners insist they never wrote them.",
       property: "The book remembers consent differently from the people who gave it.",
-      instruction: "Compare the signatures and identify the altered consent line.",
-      puzzle: "compare",
+      investigation: {
+        statement: "The Museum: “EVERY OBJECT WAS FREELY GIVEN.”",
+        observations: [
+          { id: "covered-paragraph", tool: "eye", label: "A paragraph hidden beneath a hand", hotspotName: "Inspect the obscured paragraph", detail: "The final consent paragraph was positioned so a docent could cover it while guests signed.", x: 49, y: 45, w: 24, h: 18 },
+          { id: "deep-impression", tool: "hand", label: "Writing impressed through two pages", hotspotName: "Feel the writing impressions", detail: "Every signature presses through the visible promise into a second sentence below.", x: 51, y: 64, w: 25, h: 16 },
+          { id: "altered-copy", tool: "magnifier", label: "Different wording on the carbon copy", hotspotName: "Magnify the carbon copy", detail: "‘Temporary preservation’ becomes ‘permanent transfer’ on the concealed duplicate.", x: 63, y: 55, w: 20, h: 19 }
+        ],
+        correctConnection: ["covered-paragraph", "altered-copy"],
+        incorrectHint: "Find the detail that concealed the terms and the detail that proves those terms changed.",
+        deduction: "Visitors unknowingly signed permanent memory transfers.",
+        fragments: [
+          { id: "promised", caption: "Visitors are promised temporary preservation." },
+          { id: "signed", caption: "They sign the visible consent line." },
+          { id: "transferred", caption: "The hidden copy records a permanent memory transfer." }
+        ]
+      },
       artifactImage: "assets/artifacts/guestbook.png",
       memoryImage: "assets/memories/guestbook.png",
       memory: "A docent covers the final paragraph with one hand. Guests sign for ‘preservation’; the carbon copy beneath says ‘permanent transfer.’",
@@ -169,8 +253,22 @@ window.GAME_DATA = {
       phase: 3,
       description: "A glass tree heavy with glowing fruit. Each one holds a life that belongs somewhere else.",
       property: "The oldest fruit beats with a living pulse.",
-      instruction: "Return each fragment to its owner: grief, guilt, and truth.",
-      puzzle: "match",
+      investigation: {
+        statement: "Archive record: “Elian Voss left the museum.”",
+        observations: [
+          { id: "elian-reflection", tool: "eye", label: "Elian’s reflection inside the oldest fruit", hotspotName: "Inspect the oldest glass fruit", detail: "The reflection moves independently of the gallery and turns toward the observer.", x: 51, y: 35, w: 22, h: 22 },
+          { id: "living-pulse", tool: "hand", label: "A living heartbeat", hotspotName: "Feel the pulse in the glass roots", detail: "A human rhythm travels from the oldest fruit through the glass roots.", x: 49, y: 66, w: 24, h: 18 },
+          { id: "fractured-face", tool: "magnifier", label: "Fractures forming Elian’s face", hotspotName: "Magnify the fractures in the fruit", detail: "Fine cracks repeat Elian’s features and bind them to the center of the tree.", x: 61, y: 43, w: 19, h: 20 }
+        ],
+        correctConnection: ["elian-reflection", "living-pulse"],
+        incorrectHint: "Prove both identity and life: one detail shows who is inside, another shows that he survives.",
+        deduction: "Elian is alive inside the Glass Orchard.",
+        fragments: [
+          { id: "melody", caption: "Mara plays the archive melody." },
+          { id: "bends", caption: "The glass branches bend toward Elian." },
+          { id: "imprisoned", caption: "The Orchard draws him alive into its heart." }
+        ]
+      },
       artifactImage: "assets/artifacts/orchard.png",
       memoryImage: "assets/memories/orchard.png",
       memory: "Mara plays the melody. The tree bends toward Elian and draws his reflection into its heart. ‘If you expose it,’ she whispers, ‘all of them disappear.’",

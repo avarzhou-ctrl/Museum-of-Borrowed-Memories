@@ -17,23 +17,30 @@ Then open [http://localhost:4173](http://localhost:4173) in a desktop browser.
 - `WASD` or arrow keys: move
 - `E` or `Space`: inspect the nearest exhibit
 - Mouse: inspect objects and use menus
+- Exhibit viewer: use Eye, Hand, and Magnifier to find details; select two details to connect them; drag or click memory fragments into order
 - Memory tabs: switch between the object's record, a human recollection, and the restored truth
 - `J`: open the journal
 - `M`: open the gallery map
 - `Escape`: close a panel or open the menu
+- `F8`: temporarily show or hide the navigation mesh, obstacle polygons, and feet anchor
 
-Progress, settings, timeline placements, contradictions, and notes save automatically in the browser.
+The collision overlay can also start enabled at [http://localhost:4173/?collisionDebug=1](http://localhost:4173/?collisionDebug=1).
+
+For endgame testing, launch [http://localhost:4173/?testMode=1](http://localhost:4173/?testMode=1), open **Menu**, and toggle **Completed case state**. The control fills every exhibit, clue, contradiction, and timeline entry; switching it off restores the prior case progress. It is not shown during normal play.
+
+Investigation progress, settings, timeline placements, and contradictions save automatically in the browser.
 
 ## Investigation flow
 
-1. Restore the Raincoat, Teacup, and Umbrella memories.
-2. Investigate Floor Thirteen, the Music Box, and the Guestbook.
-3. Use statements, memories, and physical clues on the Case Board to prove at least three contradictions.
-4. Restore the newly unlocked Glass Orchard.
-5. Place at least five timeline events and make a structured accusation.
-6. Decide the archive’s fate.
+1. Inspect an exhibit with Eye, Hand, and Magnifier to record three observations.
+2. Connect the two observations that disprove its suspect statement or museum label.
+3. Arrange three text fragments to restore its Object Memory, Human Recollection, and Restored Truth.
+4. Restore the Raincoat, Teacup, and Umbrella, then investigate Floor Thirteen, the Music Box, and the Guestbook.
+5. Use statements, memories, and physical clues on the Case Board to prove at least three contradictions.
+6. Restore the newly unlocked Glass Orchard.
+7. Place at least five timeline events, make a structured accusation, and decide the archive’s fate.
 
-The game supports a six-of-seven solution route, early accusations, five distinct endings, two selectable investigators with front/side/back movement and interaction animations, perspective-switching memory scenes, a draggable timeline, a visual evidence wall, evolving suspect statements and museum labels, keyboard navigation, reduced motion, larger text, text-speed controls, and persistent field notes.
+The game supports a six-of-seven solution route, early accusations, five distinct endings, two selectable investigators with front/side/back movement and interaction animations, perspective-switching memory scenes, a draggable timeline, a visual evidence wall, evolving suspect statements and museum labels, keyboard navigation, reduced motion, larger text, and text-speed controls.
 
 ## Verify the prototype
 
@@ -44,7 +51,7 @@ python3 tests/browser_smoke.py
 python3 tests/browser_branches.py
 ```
 
-The smoke test completes all seven exhibit puzzles, switches memory perspectives, verifies directional and interaction animation states, proves contradictions, fills the timeline, makes the correct accusation, reaches an ending, checks for browser errors, and confirms both investigators launch. The branch suite verifies the six-exhibit route, drag-and-drop placement, all five endings, persistence, accessibility settings, and generated asset loading.
+The smoke test completes Observe → Connect → Restore for all seven exhibits, switches memory perspectives, verifies directional and interaction animation states, proves contradictions, fills the timeline, makes the correct accusation, reaches an ending, checks for browser errors, and confirms both investigators launch. The branch suite verifies incorrect deductions and fragment orders, click and drag correction, partial-progress reload, legacy and malformed-save migration, replay de-duplication, the six-exhibit route, all five endings, settings, and generated asset loading.
 
 ## Project structure
 
@@ -56,9 +63,10 @@ The smoke test completes all seven exhibit puzzles, switches memory perspectives
 - `assets/artifacts/`: seven isolated inspection artifacts generated for the object viewer, clue journal, and timeline
 - `assets/suspects/`: four generated accusation and evidence-board portraits
 - `assets/characters/`: cleaned, transparent, foot-aligned front/side/back idle, walk, and interaction frames extracted from the supplied sheets
-- `assets/ui/`: supplied circular HUD icons, gold numerals, and interaction decoration extracted onto transparent canvases
-- `src/data.js`: exhibits, clues, suspects, timeline, contradictions, and accusation data
-- `src/game.js`: movement, puzzles, progression, persistence, panels, and endings
+- `assets/ui/`: supplied HUD elements plus generated painted inspection medallions, auditor’s ledger, Victorian panels, evidence cards, and case-board surface
+- `src/data.js`: exhibits, observations, memory fragments, clues, suspects, timeline, contradictions, and accusation data
+- `src/room-collision.js`: reusable walkable-floor polygon, exhibit obstacles, architecture barriers, margins, and interaction approach points
+- `src/game.js`: movement, shared investigation pipeline, progression, persistence, panels, and endings
 - `scripts/prepare_character_assets.py`: reproducible character-frame cleanup and normalization
 - `scripts/prepare_replacement_assets.py`: reproducible UI, numeral, and replacement-gallery preparation
 - `tests/browser_smoke.py`: full browser playthrough
