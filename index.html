@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#100b19" />
+    <meta
+      name="description"
+      content="Museum of Borrowed Memories — a short desktop detective game about objects that remember."
+    />
+    <title>Museum of Borrowed Memories</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#game">Skip to game</a>
+
+    <main id="game" class="game-shell" aria-live="polite">
+      <section id="title-screen" class="screen title-screen is-active" aria-labelledby="game-title">
+        <div class="title-stars" aria-hidden="true"></div>
+        <div class="title-arch" aria-hidden="true">
+          <div class="title-orchard"><span></span><span></span><span></span><span></span><span></span></div>
+        </div>
+        <div class="title-copy">
+          <p class="eyebrow">The exhibits remember what people tried to erase</p>
+          <h1 id="game-title">Museum of<br /><em>Borrowed Memories</em></h1>
+          <p class="title-blurb">Curator Elian Voss vanished at 11:43 PM. Seven objects witnessed the truth.</p>
+          <button id="begin-button" class="button button-primary">Enter the Museum</button>
+          <button id="continue-button" class="button button-quiet is-hidden">Continue Investigation</button>
+        </div>
+      </section>
+
+      <section id="selection-screen" class="screen selection-screen" aria-labelledby="select-title">
+        <div class="panel selection-panel">
+          <p class="eyebrow">Memory Auditor Registry</p>
+          <h2 id="select-title">Who enters the archive?</h2>
+          <p>Choose your investigator. Your choice changes appearance, not the mystery.</p>
+          <div class="character-options" role="radiogroup" aria-label="Choose an investigator">
+            <button class="character-card" data-character="female" role="radio" aria-checked="false">
+              <span class="investigator investigator-female is-preview" aria-hidden="true">
+                <span class="hair"></span><span class="hat"></span><span class="head"></span>
+                <span class="body"></span><span class="bag"></span><span class="legs"></span>
+              </span>
+              <strong>Auditor Wren</strong>
+              <span>Observant · Patient</span>
+            </button>
+            <button class="character-card" data-character="male" role="radio" aria-checked="false">
+              <span class="investigator investigator-male is-preview" aria-hidden="true">
+                <span class="hair"></span><span class="head"></span><span class="body"></span>
+                <span class="bag"></span><span class="watch"></span><span class="legs"></span>
+              </span>
+              <strong>Auditor Vale</strong>
+              <span>Methodical · Resolute</span>
+            </button>
+          </div>
+          <button id="start-button" class="button button-primary" disabled>Begin Audit</button>
+        </div>
+      </section>
+
+      <section id="museum-screen" class="screen museum-screen" aria-label="Main museum gallery">
+        <div class="museum-backdrop" aria-hidden="true">
+          <div class="arch arch-left"></div><div class="arch arch-center"></div><div class="arch arch-right"></div>
+          <div class="chandelier"><i></i><i></i><i></i><i></i><i></i></div>
+          <div class="balcony"></div>
+          <div id="particles" class="particles"></div>
+        </div>
+
+        <header class="museum-hud">
+          <div class="location-block">
+            <p class="gallery-brand">Museum of Borrowed Memories</p>
+            <h2>Main Gallery</h2>
+            <p id="objective" class="objective">Explore the gallery and inspect the exhibits.</p>
+          </div>
+          <nav class="hud-actions" aria-label="Game panels">
+            <button class="icon-button" data-panel="menu" aria-label="Open menu"><span class="hud-icon hud-icon-menu"></span>Menu</button>
+            <button class="icon-button" data-panel="journal" aria-label="Open journal"><span class="hud-icon hud-icon-journal"></span>Journal</button>
+            <button class="icon-button" data-panel="case" aria-label="Open case board"><span class="hud-icon hud-icon-clues"></span>Clues</button>
+            <button class="icon-button" data-panel="map" aria-label="Open map"><span class="hud-icon hud-icon-map"></span>Map</button>
+          </nav>
+        </header>
+
+        <aside class="progress-card" aria-label="Investigation progress">
+          <span class="butterfly" aria-hidden="true">✦</span>
+          <strong>Memories restored</strong>
+          <span id="memory-count">0 / 7</span>
+          <div class="progress-track"><span id="progress-fill"></span></div>
+        </aside>
+
+        <div id="gallery" class="gallery painted-gallery" tabindex="0" aria-label="Walkable gallery. Use WASD or arrow keys to move.">
+          <div class="exhibit exhibit-raincoat" data-exhibit="raincoat" style="--x:18%;--y:57%;--hit-w:15vw;--hit-h:44vh;">
+            <div class="case-glow"></div><div class="glass-case"><div class="object raincoat-object"><i></i></div></div>
+            <div class="pedestal"><span>The Raincoat</span></div>
+          </div>
+          <div class="exhibit exhibit-teacup" data-exhibit="teacup" style="--x:25%;--y:75%;--hit-w:16vw;--hit-h:32vh;">
+            <div class="case-glow"></div><div class="glass-case small-case"><div class="object teacup-object"><i></i></div></div>
+            <div class="pedestal"><span>The Cracked Teacup</span></div>
+          </div>
+          <div class="exhibit exhibit-elevator is-locked" data-exhibit="elevator" style="--x:92%;--y:72%;--hit-w:15vw;--hit-h:31vh;">
+            <div class="lock-mark">II</div><div class="glass-case small-case"><div class="object elevator-object">13</div></div>
+            <div class="pedestal"><span>Floor Thirteen</span></div>
+          </div>
+          <div class="exhibit exhibit-orchard is-locked" data-exhibit="orchard" style="--x:50%;--y:49%;--hit-w:20vw;--hit-h:40vh;">
+            <div class="lock-mark">III</div><div class="orchard-dome"><div class="glass-tree"><i></i><i></i><i></i><i></i><i></i></div></div>
+            <div class="pedestal wide"><span>The Glass Orchard</span></div>
+          </div>
+          <div class="exhibit exhibit-musicbox is-locked" data-exhibit="musicbox" style="--x:63%;--y:57%;--hit-w:15vw;--hit-h:35vh;">
+            <div class="lock-mark">II</div><div class="glass-case small-case"><div class="object musicbox-object"><i></i></div></div>
+            <div class="pedestal"><span>The Music Box</span></div>
+          </div>
+          <div class="exhibit exhibit-umbrella" data-exhibit="umbrella" style="--x:36%;--y:55%;--hit-w:15vw;--hit-h:37vh;">
+            <div class="case-glow"></div><div class="glass-case"><div class="object umbrella-object"><i></i></div></div>
+            <div class="pedestal"><span>The Silver Umbrella</span></div>
+          </div>
+          <div class="exhibit exhibit-guestbook is-locked" data-exhibit="guestbook" style="--x:77%;--y:72%;--hit-w:20vw;--hit-h:34vh;">
+            <div class="lock-mark">II</div><div class="glass-case small-case"><div class="object guestbook-object"><i></i></div></div>
+            <div class="pedestal"><span>The Velvet Guestbook</span></div>
+          </div>
+
+          <div id="player" class="player" data-direction="front" style="--player-x: 50%; --player-y: 78%;">
+            <span class="contact-shadow"></span>
+            <span id="player-sprite" class="investigator investigator-female" aria-label="Player character">
+              <span class="hair"></span><span class="hat"></span><span class="head"></span>
+              <span class="body"></span><span class="bag"></span><span class="watch"></span><span class="legs"></span>
+            </span>
+          </div>
+          <div id="interaction-prompt" class="interaction-prompt is-hidden"><kbd>E</kbd> Inspect</div>
+          <div class="foreground foreground-left" aria-hidden="true"></div>
+          <div class="foreground foreground-right" aria-hidden="true"></div>
+        </div>
+
+        <div class="controls-hint"><kbd>WASD</kbd> Move <span>·</span> <kbd>E</kbd> Inspect <span>·</span> <kbd>J</kbd> Journal</div>
+      </section>
+    </main>
+
+    <div id="modal-root" class="modal-root" aria-live="assertive"></div>
+    <div id="toast-region" class="toast-region" aria-live="polite" aria-atomic="true"></div>
+
+    <script src="src/data.js"></script>
+    <script src="src/game.js"></script>
+  </body>
+</html>
