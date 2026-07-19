@@ -22,6 +22,9 @@ INVESTIGATIONS = {
 
 
 def finish_cutscene(page):
+    if page.locator(".audio-reminder-card").count():
+        page.locator(".audio-reminder-card").wait_for(state="detached", timeout=4000)
+        page.locator(".cutscene-screen").wait_for()
     for _ in range(12):
         if page.locator(".cutscene-screen").count() == 0:
             return
@@ -209,6 +212,13 @@ def main():
         assert title_audio["cueLevel"] > title_audio["musicLevel"], title_audio
         page.get_by_role("button", name="Enter the Museum").click()
         page.wait_for_function("window.MUSEUM_AUDIO_API?.status().unlocked")
+        reminder = page.locator(".audio-reminder-card")
+        reminder.wait_for(state="visible")
+        assert reminder.get_by_text("For the full experience", exact=True).is_visible()
+        assert reminder.get_by_role("heading", name="Turn up your audio").is_visible()
+        assert reminder.evaluate("el => getComputedStyle(el).backgroundColor") == "rgb(2, 2, 4)"
+        assert page.locator(".cutscene-screen").count() == 0
+        reminder.wait_for(state="detached", timeout=4000)
         page.wait_for_function("window.MUSEUM_AUDIO_API?.status().cutsceneNarrationKey === 'start:0'")
         assert page.evaluate("window.MUSEUM_AUDIO_API.status().cutsceneNarrationPlaying")
         page.wait_for_function("window.MUSEUM_AUDIO_API?.status().musicPlaying", timeout=10000)

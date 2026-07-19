@@ -173,6 +173,8 @@
   let cutsceneSkipTimeout = null;
   let activePhaseCard = null;
   let phaseCardTimeout = null;
+  let activeAudioReminder = null;
+  let audioReminderTimeout = null;
   const testModeEnabled = new URLSearchParams(window.location.search).has("testMode");
   let collisionDebugEnabled = new URLSearchParams(window.location.search).has("collisionDebug");
 
@@ -765,7 +767,7 @@
     const urls = new Set([
       "assets/generated/title-gallery.png", "assets/generated/title-wordmark.png",
       "assets/generated/title-button-enter.png", "assets/generated/title-button-continue.png",
-      "assets/generated/main-gallery.png", "assets/generated/archive-viewer.png",
+      "assets/generated/main-gallery.png", "assets/generated/title-gallery.png",
       "assets/generated/start-cutscene.png", "assets/generated/end-cutscene.png",
       "assets/ui/menu.png", "assets/ui/journal.png", "assets/ui/clues.png", "assets/ui/map.png", "assets/ui/inspect-prompt.png",
       ...INSPECTION_TOOLS.map(([, path]) => path)
@@ -891,6 +893,25 @@
       card.remove();
       onComplete?.();
     }, state.settings.reducedMotion ? 3900 : 4900);
+  }
+
+  function showAudioReminder(onComplete) {
+    activeAudioReminder?.remove();
+    window.clearTimeout(audioReminderTimeout);
+    keys.clear();
+    const card = document.createElement("section");
+    card.className = "audio-reminder-card";
+    card.setAttribute("role", "status");
+    card.setAttribute("aria-live", "assertive");
+    card.innerHTML = `<div><p>For the full experience</p><h2>Turn up your audio</h2></div>`;
+    document.body.append(card);
+    activeAudioReminder = card;
+    audioReminderTimeout = window.setTimeout(() => {
+      if (activeAudioReminder !== card) return;
+      activeAudioReminder = null;
+      card.remove();
+      onComplete();
+    }, state.settings.reducedMotion ? 1800 : 2600);
   }
 
   function currentObjective() {
@@ -1842,6 +1863,7 @@
 
   document.addEventListener("keydown", (event) => {
     const key = event.key.toLowerCase();
+    if (activeAudioReminder) { event.preventDefault(); return; }
     if (activePhaseCard) { event.preventDefault(); return; }
     if (activeCutscene) {
       if (["arrowright", "enter", " "].includes(key)) { event.preventDefault(); advanceCutscene(); }
@@ -1869,7 +1891,8 @@
     }
     if (!museumScreen.classList.contains("is-active")) return;
     if (["arrowleft","arrowright","arrowup","arrowdown","w","a","s","d"].includes(key)) { event.preventDefault(); keys.add(key); }
-    if ((key === "e" || key === " ") && nearestExhibit) { event.preventDefault(); beginExhibitInteraction(nearestExhibit); }
+    const focusedControl = event.target.closest?.("button, input, select, textarea, [role='tab']");
+    if ((key === "e" || key === " ") && nearestExhibit && !focusedControl) { event.preventDefault(); beginExhibitInteraction(nearestExhibit); }
     if (key === "j") openJournal();
     if (key === "m") openMap();
   });
@@ -1884,7 +1907,7 @@
 
   $("#begin-button").addEventListener("click", () => {
     selectedCharacter = null;
-    playCutscene("start", () => showScreen(selectionScreen));
+    showAudioReminder(() => playCutscene("start", () => showScreen(selectionScreen)));
   });
   $("#continue-button").addEventListener("click", async () => {
     await preloadCharacterAssets(state.character || "female");

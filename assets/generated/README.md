@@ -39,13 +39,3 @@ User-supplied painterly opening-cutscene background. The composition reserves it
 ## `end-cutscene.png`
 
 User-supplied painterly ending-cutscene background. Its dark left side carries the result-specific story selected by the accusation strength and archive decision.
-
-## `archive-viewer.png`
-
-Created with the built-in `imagegen` tool on 2026-07-17.
-
-Use case: `stylized-concept`
-
-Prompt: Create a reusable painterly archive alcove for exhibit inspection and restored-memory screens. Place an empty glass display dome on an ornate dark wood and brass pedestal in the left portion, with blurred gothic windows, velvet curtains, violet motes, and warm edge lighting. Keep the right portion dark and simple for readable HTML text. Match the supplied deep-plum, antique-gold, muted-rose, and violet palette. No object inside the dome, people, characters, interface controls, text, logos, watermark, neon, or modern UI.
-
-References: `References/Interface.png` and `References/Gameplay.png`.

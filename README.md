@@ -42,23 +42,23 @@ The supplied “Borrowed Memories” backing track is initialized on the title p
 6. Restore the newly unlocked Glass Orchard.
 7. Place at least five timeline events, make a structured accusation, and decide the archive’s fate.
 
-The game supports a six-of-seven solution route, early accusations, five distinct result-driven ending cutscenes, a player-paced opening cutscene before character selection, two selectable investigators with generated multi-frame front/side/back idle, walk, and interaction animation, perspective-switching memory scenes, a draggable case-board timeline, a horizontally scrolling journal timeline, persistent new-entry/action badges, a visual evidence wall, evolving suspect statements and museum labels, keyboard navigation, reduced motion, larger text, and text-speed controls. Cutscenes advance only from the circular `>` control or keyboard and reveal a Skip control after three seconds.
+The game supports a six-of-seven solution route, early accusations, five distinct result-driven ending cutscenes, a black audio-reminder flash after entering, a player-paced opening cutscene before character selection, two selectable investigators with generated multi-frame front/side/back idle, walk, and interaction animation, perspective-switching memory scenes, a draggable case-board timeline, a horizontally scrolling journal timeline, persistent new-entry/action badges, a visual evidence wall, evolving suspect statements and museum labels, keyboard navigation, reduced motion, larger text, and text-speed controls. Cutscenes advance only from the circular `>` control or keyboard and reveal a Skip control after three seconds.
 
 ## Desktop support
 
-The intended minimum viewport is **1280×720** with a keyboard and mouse or trackpad; 1440×900 is the reference layout. Panels remain scrollable in narrower desktop windows and with enlarged text. The implementation targets current desktop Chrome/Edge, Firefox, and Safari. Automated end-to-end coverage runs in Chromium; the final cross-browser and zoom sweep remains a release check.
+The intended minimum viewport is **1280×720** with a keyboard and mouse or trackpad; 1440×900 is the reference layout. Panels remain scrollable in narrower desktop windows and with enlarged text. The implementation targets current desktop Chrome/Edge, Firefox, and Safari. Automated Chromium coverage includes 1280×720, 1440×900, 1920×1080, a narrow 620×900 desktop window, and a 640×450 effective 200% zoom layout.
 
 ## Verify the prototype
 
-With Playwright for Python installed, run the complete sequential verifier. It starts a local server when needed, checks JavaScript syntax, and runs both browser suites without concurrent Chromium launches:
+With Playwright for Python installed, run the complete sequential verifier. It starts a local server when needed, checks JavaScript syntax, and runs all three browser suites without concurrent Chromium launches:
 
 ```bash
 ./scripts/verify.sh
 ```
 
-The two suites remain independently runnable with `python3 tests/browser_smoke.py` and `python3 tests/browser_branches.py` when a server is already running.
+The suites remain independently runnable with `python3 tests/browser_smoke.py`, `python3 tests/browser_branches.py`, and `python3 tests/release_qa.py` when a server is already running.
 
-The smoke test completes Observe → Connect → Restore for all seven exhibits, switches memory perspectives, verifies directional and interaction animation states, proves contradictions, fills the timeline, makes the correct accusation, reaches an ending, checks for browser errors, and confirms both investigators launch. The branch suite verifies incorrect deductions and fragment orders, click and drag correction, partial-progress reload, legacy and malformed-save migration, replay de-duplication, the six-exhibit route, all five endings, settings, and generated asset loading.
+The smoke test completes Observe → Connect → Restore for all seven exhibits, switches memory perspectives, verifies directional and interaction animation states, proves contradictions, fills the timeline, makes the correct accusation, reaches an ending, checks for browser errors, and confirms both investigators launch. The branch suite verifies incorrect deductions and fragment orders, click and drag correction, partial-progress reload, legacy and malformed-save migration, replay de-duplication, the six-exhibit route, all five endings, settings, and generated asset loading. The release suite exercises a fresh-state focus/keyboard route, both character sets, every collision polygon, focus trapping and return, semantic and non-color status cues, reduced motion, enlarged text, the viewport matrix, production-frame integrity, and browser console/network cleanliness. It writes `/tmp/museum-release-qa.json` and `/tmp/museum-character-contact-sheet.png` for review.
 
 ## Suno prompt for music
 Written by ChatGPT.
@@ -112,9 +112,10 @@ Speak clearly and naturally at a moderate pace. Keep the delivery calm, controll
 - `src/room-collision.js`: reusable walkable-floor polygon, exhibit obstacles, architecture barriers, margins, and interaction approach points
 - `src/game.js`: movement, shared investigation pipeline, progression, persistence, panels, and endings
 - `scripts/prepare_character_assets.py`: direct reference-sheet copying, background masking, equal-height production scaling, and foot alignment
-- `scripts/verify.sh`: one-command sequential server, syntax, smoke, and branch verification
+- `scripts/verify.sh`: one-command sequential server, syntax, smoke, branch, and release-matrix verification
 - `scripts/prepare_replacement_assets.py`: reproducible UI, numeral, and replacement-gallery preparation
 - `tests/browser_smoke.py`: full browser playthrough
 - `tests/browser_branches.py`: progression, ending, persistence, accessibility, and asset-loading branches
+- `tests/release_qa.py`: keyboard/focus route, viewport matrix, collision matrix, character-frame audit, and console/network release checks
 - `References/replacements/`: the five user-supplied replacement sheets and gallery source
 - `References/`: source design documents and visual references (never shown raw in-game)

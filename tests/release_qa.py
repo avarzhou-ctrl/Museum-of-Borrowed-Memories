@@ -134,6 +134,8 @@ def fresh_keyboard_route(page):
     page.evaluate("localStorage.clear(); sessionStorage.clear()")
     page.reload()
     activate(page, page.get_by_role("button", name="Enter the Museum"))
+    page.locator(".audio-reminder-card").wait_for(state="detached", timeout=4000)
+    page.locator(".cutscene-screen").wait_for()
     for _ in range(10):
         if not page.locator(".cutscene-screen").count():
             break

@@ -210,7 +210,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, [tabindex]:focu
 .interaction-prompt kbd { color: #e9bf84; background: rgb(18 14 24 / 88%); }
 kbd { padding: .08rem .34rem; border: 1px solid #746173; border-bottom-width: 2px; border-radius: 3px; color: var(--gold-bright); background: #221826; font: .72rem var(--sans); }
 .controls-hint { position: absolute; z-index: 170; right: 1.3rem; bottom: 1rem; color: #c8bac7; text-shadow: 0 2px 8px #000; font: .82rem/1.2 var(--sans); }.controls-hint span { margin: 0 .35rem; }.controls-hint kbd { font-size: .82rem; }
-.foreground { position: absolute; z-index: 75; bottom: -8%; width: 16%; height: 34%; background: linear-gradient(90deg, #09060c, #1b1121); filter: blur(1px); opacity: .85; }.foreground-left { left: -8%; transform: skewX(-8deg); }.foreground-right { right: -8%; transform: skewX(8deg); }
+.foreground { position: absolute; z-index: 120; bottom: -8%; width: 16%; height: 34%; background: linear-gradient(90deg, #09060c, #1b1121); filter: blur(1px); opacity: .85; }.foreground-left { left: -8%; transform: skewX(-8deg); }.foreground-right { right: -8%; transform: skewX(8deg); }
 .collision-debug-overlay { position: absolute; z-index: 140; inset: 0; width: 100%; height: 100%; pointer-events: none; }
 .collision-debug-walkable { fill: rgb(72 220 120 / 14%); stroke: #55f28b; stroke-width: 2; vector-effect: non-scaling-stroke; }
 .collision-debug-obstacle { fill: rgb(255 55 72 / 22%); stroke: #ff4555; stroke-width: 2; vector-effect: non-scaling-stroke; }
@@ -225,7 +225,7 @@ kbd { padding: .08rem .34rem; border: 1px solid #746173; border-bottom-width: 2p
 .modal-header h2 { margin: 0; color: var(--gold-bright); font: 500 clamp(1.8rem, 3vw, 2.7rem) var(--serif); }.modal-header p { margin: .25rem 0 0; color: #aa98a9; }
 .close-button { width: 42px; height: 42px; border: 1px solid #795f65; border-radius: 50%; color: var(--gold-bright); background: #19111e; cursor: pointer; font-size: 1.25rem; }
 .viewer { display: grid; grid-template-columns: minmax(320px, 1.1fr) minmax(300px, .9fr); min-height: 590px; }
-.object-stage { position: relative; display: grid; place-items: center; min-height: 460px; margin: 0 1.5rem 1.5rem; overflow: hidden; border: 1px solid rgb(199 161 106 / 24%); background: linear-gradient(rgb(11 7 15 / 12%), rgb(11 7 15 / 25%)), url("assets/generated/archive-viewer.png") 30% center / cover no-repeat; }
+.object-stage { position: relative; display: grid; place-items: center; min-height: 460px; margin: 0 1.5rem 1.5rem; overflow: hidden; border: 1px solid rgb(199 161 106 / 24%); background: linear-gradient(rgb(11 7 15 / 12%), rgb(11 7 15 / 25%)), url("assets/generated/title-gallery.png") 30% center / cover no-repeat; }
 .object-stage::before { content: ""; position: absolute; inset: 0; box-shadow: inset 0 0 60px rgb(6 3 10 / 72%); }
 .stage-symbol { position: relative; z-index: 2; display: grid; place-items: center; width: 190px; height: 190px; color: var(--gold-bright); font: 5rem var(--serif); filter: drop-shadow(0 0 20px rgb(208 144 207 / 35%)); transition: transform .25s; }
 .stage-symbol-elevator { color: transparent; background: url("assets/ui/floor-thirteen.png") center / contain no-repeat; }
@@ -235,7 +235,7 @@ kbd { padding: .08rem .34rem; border: 1px solid #746173; border-bottom-width: 2p
 .puzzle-progress { margin: .8rem 0 0; color: #ad99aa; font-size: .82rem; }
 .rotation-control { width: 100%; accent-color: var(--gold); }.signature-list { display: grid; gap: .45rem; }.signature-list button { text-align: left; }
 .droplets { position: absolute; z-index: 5; inset: 0; }.droplet { position: absolute; width: 22px; height: 29px; border: 1px solid #cabbd1; border-radius: 60% 40% 55% 45%; background: rgb(172 148 196 / 22%); cursor: pointer; transform: rotate(35deg); }.droplet:hover { background: rgb(214 190 226 / 40%); }
-.memory-modal { width: min(1080px, 94vw); background: linear-gradient(90deg, rgb(15 8 20 / 22%), rgb(9 6 13 / 95%) 69%), url("assets/generated/archive-viewer.png") 25% center / cover no-repeat; }
+.memory-modal { width: min(1080px, 94vw); background: linear-gradient(90deg, rgb(15 8 20 / 22%), rgb(9 6 13 / 95%) 69%), url("assets/generated/title-gallery.png") 25% center / cover no-repeat; }
 .perspective-switch { position: relative; z-index: 3; display: flex; gap: .35rem; padding: 0 1.4rem .8rem; border-bottom: 1px solid rgb(199 161 106 / 18%); }
 .perspective-switch button { min-height: 38px; padding: .45rem .85rem; border: 1px solid #594452; color: #a997a5; background: rgb(21 14 25 / 82%); cursor: pointer; font: .78rem var(--serif); letter-spacing: .04em; }
 .perspective-switch button:hover, .perspective-switch button[aria-selected="true"] { color: var(--gold-bright); border-color: var(--gold); background: #342338; box-shadow: inset 0 -2px var(--gold); }
@@ -531,6 +531,11 @@ button.observation-card.is-known { width: 100%; cursor: pointer; }
 .phase-card p { margin: 0 0 .8rem; color: #a77e91; font: 700 .75rem var(--sans); letter-spacing: .32em; text-transform: uppercase; }
 .phase-card h2 { margin: 0; color: #ead8b7; font: 500 clamp(2.8rem, 6vw, 6rem)/1 var(--display); letter-spacing: -.02em; text-shadow: 0 0 32px rgb(151 93 164 / 20%); }
 @keyframes phase-card-flash { 0% { opacity: 0; } 16%, 72% { opacity: 1; } 100% { opacity: 0; } }
+.audio-reminder-card { position: fixed; z-index: 710; inset: 0; display: grid; place-items: center; color: var(--cream); background: #020204; text-align: center; animation: audio-reminder-flash 2.6s ease-in-out both; }
+.audio-reminder-card > div { padding: 2rem; }
+.audio-reminder-card p { margin: 0 0 .7rem; color: #a77e91; font: 700 .75rem var(--sans); letter-spacing: .28em; text-transform: uppercase; }
+.audio-reminder-card h2 { margin: 0; color: #ead8b7; font: 500 clamp(2.5rem, 5vw, 5.4rem)/1 var(--display); letter-spacing: -.02em; text-shadow: 0 0 32px rgb(151 93 164 / 20%); }
+@keyframes audio-reminder-flash { 0% { opacity: 0; } 18%, 72% { opacity: 1; } 100% { opacity: 0; } }
 
 .puzzle-box, .fragment-bank, .contradiction-form {
   border: 0;

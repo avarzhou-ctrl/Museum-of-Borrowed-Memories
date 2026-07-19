@@ -32,5 +32,6 @@ node --check src/room-collision.js
 node --check src/game.js
 python3 tests/browser_smoke.py
 python3 tests/browser_branches.py
+python3 tests/release_qa.py
 
-echo "PASS: syntax, smoke, and branch verification completed sequentially"
+echo "PASS: syntax, smoke, branch, and release-matrix verification completed sequentially"
