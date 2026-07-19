@@ -16,6 +16,22 @@ Prompt: Create cinematic painterly title key art in the same world as the refere
 
 References: `References/Title.png` and `References/Gameplay.png`.
 
+## `title-wordmark.png`
+
+Created with the built-in `imagegen` tool on 2026-07-19, using `title-gallery.png` as a palette and mood reference. The generated title was placed on a flat chroma-key background, converted to a transparent PNG, and tightly cropped for title-screen use.
+
+Use case: `logo-brand`
+
+Prompt: Create only an elegant two-line wordmark reading “MUSEUM OF” and “BORROWED MEMORIES,” using refined old-style serif lettering, restrained Art Nouveau flourishes, warm aged ivory, antique gold, and subtle dusty rose-violet accents. Keep the base state unlit so the interactive glow can be supplied by CSS. No subtitle, tagline, frame, plaque, scene, objects, watermark, or baked-in outer glow.
+
+## `title-button-enter.png` and `title-button-continue.png`
+
+Created with the built-in `imagegen` tool on 2026-07-19. Both assets were generated on flat chroma-key backgrounds, converted to transparent PNGs, and tightly cropped. Their empty centers deliberately preserve the accessible live button labels in `index.html`.
+
+Use case: `ui-mockup`
+
+Prompts: Create one empty, approximately 4:1 Victorian Art Nouveau button skin matching the title wordmark, with antique-gold and dusty-rose ornament over a deep plum center. The Enter version uses a warmer illuminated primary frame; the Continue version preserves the same silhouette in a quieter, less saturated state. No text, icons, scene, cast shadow, watermark, modern rounded rectangle, or neon styling.
+
 ## `start-cutscene.png`
 
 User-supplied painterly opening-cutscene background. The composition reserves its dark right side for the player-paced story text defined in `References/Cutscenes.md`.

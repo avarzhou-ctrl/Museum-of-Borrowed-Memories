@@ -2,10 +2,6 @@
 
 All remaining implementation work is complete. This deletion-based checklist now contains only release validation intentionally excluded from the current task.
 
-- [ ] Generate title page using ChatGPT.
-- [ ] Make the memories interface more visually appealing.
-- [ ] Add memory cutscenes with generated voices.
-
 ## Manual and matrix QA
 
 - [ ] Exercise both investigators through front, back, left, right, idle, walk, interaction, memory replay, accusation, and ending flows; visually compare scale, shadows, foot anchors, clothing, hair, bags, watches, and accessories in every state.

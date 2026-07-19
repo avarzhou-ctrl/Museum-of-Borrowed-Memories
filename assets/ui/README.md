@@ -14,6 +14,7 @@ Run `python3 scripts/prepare_replacement_assets.py` to reproduce these files and
 The files in `generated/` were created with the built-in image-generation workflow, using the supplied journal/case-board and object-inspection screenshots as visual references. They are production UI surfaces, not crops of the screenshots.
 
 - `tool-eye.png`, `tool-hand.png`, and `tool-magnifier.png`: square Victorian museum medallions with a strong eye, open hand, or magnifying-glass silhouette; rustic hand-painted oil texture, aged brass rim, dark plum enamel, no text.
+- `memory-hotspot-shimmer.png`: transparent irregular gouache wisp used to mark inspectable details without geometric rings or vector-style hotspot controls.
 - `auditor-journal.png`: blank open antique investigator ledger with two aged parchment pages, leather spine, brass corners, and a deep-plum desk surround; no writing.
 - `victorian-panel.png`: ornate aged-brass and blackened-wood landscape frame with a blank deep-plum center for live controls and text.
 - `evidence-card.png`: blank lined evidence dossier with worn parchment, brass corner clips, and a single oxblood pushpin; no text.

@@ -150,7 +150,7 @@ def main():
         assert migrated["player"] == {"x": 50, "y": 78} and migrated["ending"] is None
         inspector.close()
 
-        # Phase 1 keeps the case tools and perspective switch sealed; Phase 2 opens both.
+        # Phase 1 keeps the case tools sealed while memory perspectives remain available immediately.
         page = seed(context, errors, ["raincoat"])
         enter_saved_case(page)
         page.get_by_role("button", name="Open case board").click()
@@ -158,7 +158,9 @@ def main():
         page.get_by_role("button", name="Close panel").click()
         page.locator('[data-exhibit="raincoat"]').evaluate("el => el.click()")
         page.get_by_role("button", name="Review restored memory").click()
-        assert page.get_by_role("tab", name="Object Memory").count() == 0
+        assert page.get_by_role("tab", name="Object Memory").count() == 1
+        assert page.get_by_role("tab", name="Human Recollection").count() == 1
+        assert page.get_by_role("tab", name="Restored Truth").count() == 1
         page.get_by_role("button", name="Close panel").click()
         page.close()
         page = seed(context, errors, ["raincoat", "teacup", "umbrella"])
@@ -370,36 +372,49 @@ def main():
             ("remember", "The Curator Remembered"),
         ]:
             page.close()
-            page = seed(context, errors, six_route, contradictions, five_events)
+            page = seed(context, errors, six_route, contradictions, five_events, settings={"volume": 100})
             enter_saved_case(page)
             choose_accusation(page)
             page.locator(f'[data-ending="{ending_id}"]').click()
+            page.wait_for_function(f"window.MUSEUM_AUDIO_API.status().cutsceneNarrationKey === '{ending_id}:0'")
+            assert page.evaluate("window.MUSEUM_AUDIO_API.status().cutsceneNarrationPlaying")
             assert page.locator(".cutscene-panel h2").inner_text() == title
             assert "end-cutscene.png" in page.locator(".cutscene-ending").evaluate("el => getComputedStyle(el).backgroundImage")
             if ending_id == "return":
                 assert not page.locator("[data-cutscene-skip]").is_visible()
                 page.locator("[data-cutscene-skip]").wait_for(state="visible", timeout=4000)
+            page.locator("[data-cutscene-next]").click()
+            page.wait_for_function(f"window.MUSEUM_AUDIO_API.status().cutsceneNarrationKey === '{ending_id}:1'")
             finish_cutscene(page)
+            assert not page.evaluate("window.MUSEUM_AUDIO_API.status().cutsceneNarrationPlaying")
             page.get_by_role("heading", name=title).wait_for()
             assert "/female/portrait.png" in page.locator(".ending-investigator").get_attribute("src")
             assert "assets/" in page.locator(".ending-screen").evaluate("el => el.style.getPropertyValue('--ending-image')")
 
         # A correct but under-supported accusation gives the weaker ending.
         page.close()
-        page = seed(context, errors, ["raincoat", "teacup", "umbrella", "elevator"])
+        page = seed(context, errors, ["raincoat", "teacup", "umbrella", "elevator"], settings={"volume": 100})
         enter_saved_case(page)
         choose_accusation(page)
         assert page.locator(".cutscene-panel h2").inner_text() == "A Beautiful Lie"
+        page.wait_for_function("window.MUSEUM_AUDIO_API.status().cutsceneNarrationKey === 'beautiful-lie:0'")
+        page.locator("[data-cutscene-next]").click()
+        page.wait_for_function("window.MUSEUM_AUDIO_API.status().cutsceneNarrationKey === 'beautiful-lie:1'")
         finish_cutscene(page)
+        assert not page.evaluate("window.MUSEUM_AUDIO_API.status().cutsceneNarrationPlaying")
         page.get_by_role("heading", name="A Beautiful Lie").wait_for()
 
         # A wrong accusation gives the collection ending and names the chosen auditor.
         page.close()
-        page = seed(context, errors, ["raincoat", "teacup", "umbrella", "elevator"], character="male")
+        page = seed(context, errors, ["raincoat", "teacup", "umbrella", "elevator"], character="male", settings={"volume": 100})
         enter_saved_case(page)
         choose_accusation(page, correct=False)
         assert page.locator(".cutscene-panel h2").inner_text() == "The Visitor Who Almost Remembered"
+        page.wait_for_function("window.MUSEUM_AUDIO_API.status().cutsceneNarrationKey === 'visitor:0'")
+        page.locator("[data-cutscene-next]").click()
+        page.wait_for_function("window.MUSEUM_AUDIO_API.status().cutsceneNarrationKey === 'visitor:1'")
         finish_cutscene(page)
+        assert not page.evaluate("window.MUSEUM_AUDIO_API.status().cutsceneNarrationPlaying")
         page.get_by_role("heading", name="The Visitor Who Almost Remembered").wait_for()
         assert page.locator(".museum-label strong").inner_text() == "Silas Hart"
         assert "/male/portrait.png" in page.locator(".ending-investigator").get_attribute("src")

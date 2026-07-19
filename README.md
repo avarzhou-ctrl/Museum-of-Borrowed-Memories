@@ -30,14 +30,14 @@ For endgame testing, launch [http://localhost:4173/?testMode=1](http://localhost
 
 Investigation progress, settings, timeline placements, and contradictions save automatically in the browser. Loaded saves are migrated and allow-listed so corrupted or older values cannot strand the player.
 
-The supplied “Borrowed Memories” backing track is initialized on the title page and loops continuously beneath museum ambience and distinct inspection, restoration, timeline, contradiction, transition, phase, and ending cues. Fresh investigations default to 100% sound, with a stronger music bus and still-louder effects bus so important feedback remains clear above the uninterrupted score. Browsers that prohibit audible autoplay keep the decoded track ready and begin it on the first permitted pointer or keyboard gesture. The audio context is retried and resumed on later gestures if suspended. **Menu → All sound** mutes the complete mix, **Sound level** controls it from 0–100%, and both settings persist. The game contains no speech, so no spoken information requires subtitles; every sound cue is paired with visible state, feedback text, or a notification. If Web Audio, music, or artwork fails, gameplay continues with readable visual fallbacks and action sounds.
+The supplied “Borrowed Memories” backing track is initialized on the title page and loops continuously beneath museum ambience, stone-floor footsteps, and distinct inspection, restoration, timeline, contradiction, transition, phase, and ending cues. Footsteps play only while the investigator successfully moves, stopping at collisions, when input ends, or when a panel opens. The opening and all five ending cutscenes play a dedicated narration clip for each player-paced slide; advancing interrupts the current clip and starts the next, while Skip or Finish stops narration immediately. Each exhibit memory also includes supplied object, human, and restored-truth narration that starts automatically with its matching perspective; switching perspectives or closing the memory stops the previous voice. The score ducks during all narration. Fresh investigations default to 100% sound. Browsers that prohibit audible autoplay begin audio on the first permitted pointer or keyboard gesture. **Menu → All sound** mutes the complete mix, **Sound level** controls it from 0–100%, and both settings persist. Every spoken passage remains visible as text. If Web Audio, music, narration, or artwork fails, gameplay continues with readable visual fallbacks and action sounds.
 
 ## Investigation flow
 
 1. Inspect an exhibit with Eye, Hand, and Magnifier to record three observations.
 2. Connect the two observations that disprove its suspect statement or museum label.
-3. Arrange three text fragments to restore the exhibit memory.
-4. Restore the Raincoat, Teacup, and Umbrella to unlock Phase 2: the Case Board, suspect portraits, object/human perspective switching, Floor Thirteen, the Music Box, and the Guestbook.
+3. Arrange three persistently scrambled text fragments to restore the exhibit memory.
+4. Compare object, human, and restored perspectives from the first memory onward. Restore the Raincoat, Teacup, and Umbrella to unlock Phase 2: the Case Board, suspect portraits, Floor Thirteen, the Music Box, and the Guestbook.
 5. Use statements, memories, and physical clues on the Case Board to prove at least three contradictions.
 6. Restore the newly unlocked Glass Orchard.
 7. Place at least five timeline events, make a structured accusation, and decide the archive’s fate.
@@ -83,6 +83,16 @@ Style:
 dark fantasy, gothic chamber music, ambient game soundtrack, music box, celesta, felt piano, glass harmonica, soft strings, mysterious, melancholic, elegant, seamless loop, instrumental
 ```
 
+# Voiceover prompt for Gemini AI Studio
+Written by ChatGPT.
+
+## Narrator
+Speaker: Achernar
+
+```text
+Speak clearly and naturally at a moderate pace. Keep the delivery calm, controlled, and slightly distant, as though reporting a memory rather than performing it. Use minimal emotion and only brief pauses between sentences. Avoid whispering, breathiness, exaggerated sadness, and theatrical suspense. Let the unsettling details come from the words themselves.
+```
+
 ## Project structure
 
 - `style.md`: standardized colors, typography, spacing, surfaces, motion, and interaction rules
@@ -92,7 +102,10 @@ dark fantasy, gothic chamber music, ambient game soundtrack, music box, celesta,
 - `assets/memories/`: seven unique painterly exhibit-memory scenes and their generation notes
 - `assets/artifacts/`: seven isolated inspection artifacts generated for the object viewer, clue journal, and timeline
 - `assets/suspects/`: four generated accusation and evidence-board portraits
-- `assets/audio/backing-track.mp3`: supplied looping exploration score
+- `assets/music/backing-track.mp3`: supplied looping exploration score
+- `assets/audio/cutscenes/`: supplied narration masters, per-slide clips, alignment notes, and regeneration instructions
+- `assets/audio/memories/`: supplied object, human, and restored-truth narration for all seven exhibits
+- `assets/audio/footsteps/`: supplied looping stone-floor walking recording
 - `assets/characters/`: `sheet-copies/` contains pixel-preserved reference frames on magenta; `final/` contains equal-height transparent, foot-aligned gameplay frames
 - `assets/ui/`: supplied HUD elements plus generated painted inspection medallions, auditor’s ledger, Victorian panels, evidence cards, and case-board surface
 - `src/data.js`: exhibits, observations, memory fragments, clues, suspects, timeline, contradictions, and accusation data

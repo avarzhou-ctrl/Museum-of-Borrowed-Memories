@@ -37,11 +37,13 @@ def restore_memory(page, exhibit, check_perspectives=False, expected_phase=None)
         assert page.locator("#player").evaluate("el => el.classList.contains('is-interacting')")
         assert "interact-" in page.locator("#player-sprite").evaluate("el => getComputedStyle(el).backgroundImage")
     page.locator(".viewer-modal").wait_for()
+    assert target.get_attribute("data-notification") == "false"
     if exhibit == "raincoat":
         page.screenshot(path="/tmp/museum-viewer.png", full_page=True)
     assert page.get_by_text("Observe", exact=True).is_visible()
     page.wait_for_function("document.querySelector('.artifact-hero')?.complete && document.querySelector('.artifact-hero').naturalWidth > 0")
     assert page.locator(".artifact-hero").evaluate("img => img.complete && img.naturalWidth > 0")
+    observe_artifact_src = page.locator(".artifact-hero").get_attribute("src")
     tool_icons = page.locator("[data-investigation-tool] img")
     assert tool_icons.count() == 3
     assert tool_icons.evaluate_all("icons => icons.every(icon => icon.complete && icon.naturalWidth > 0 && icon.src.includes('/assets/ui/generated/tool-'))")
@@ -51,9 +53,14 @@ def restore_memory(page, exhibit, check_perspectives=False, expected_phase=None)
 
     for tool in ("Eye", "Hand", "Magnifier"):
         page.get_by_role("button", name=f"Use {tool}").click()
-        page.locator("[data-observation-hotspot]").click()
+        hotspot = page.locator("[data-observation-hotspot]")
+        assert hotspot.locator('img[src="assets/ui/generated/memory-hotspot-shimmer.png"]').count() == 1
+        assert hotspot.evaluate("el => getComputedStyle(el).borderRadius") == "0px"
+        assert hotspot.evaluate("el => getComputedStyle(el).backgroundColor") == "rgba(0, 0, 0, 0)"
+        hotspot.click()
 
     assert page.locator(".observation-card.is-known").count() == 3
+    assert page.locator('.observation-hotspot.is-discovered img[src="assets/ui/generated/memory-hotspot-shimmer.png"]').count() == 3
     page.get_by_role("button", name="Continue to Connect").click()
     assert page.locator(".investigation-tools").count() == 0
     connection, fragments = INVESTIGATIONS[exhibit]
@@ -67,29 +74,56 @@ def restore_memory(page, exhibit, check_perspectives=False, expected_phase=None)
         page.screenshot(path="/tmp/museum-connect.png", full_page=True)
     page.get_by_role("button", name="Continue to Restore").click()
 
-    assert f"{exhibit}.png" in page.locator(".restore-memory").evaluate("el => getComputedStyle(el).backgroundImage")
+    restore_visual = page.locator(".restore-memory")
+    assert observe_artifact_src in restore_visual.evaluate("el => getComputedStyle(el).backgroundImage")
+    assert f"artifacts/{exhibit}.png" in restore_visual.evaluate("el => getComputedStyle(el).backgroundImage")
+    assert restore_visual.get_attribute("data-repair-progress") == "0"
+    assert page.locator(".restore-layout svg").count() == 0
+    assert page.locator(".memory-fragment-image").count() == 3
+    bank_order = page.locator("[data-memory-fragment]").evaluate_all("items => items.map(item => item.dataset.memoryFragment)")
+    assert set(bank_order) == set(fragments)
+    assert bank_order != list(fragments), (exhibit, bank_order)
+    assert page.evaluate("([id]) => JSON.parse(localStorage.getItem('museum-of-borrowed-memories-v1')).investigations[id].fragmentOrder", [exhibit]) == bank_order
+    fragment_background_size = page.locator(".memory-fragment-image").first.evaluate("el => getComputedStyle(el).backgroundSize")
+    assert all(value.strip() == "300%" for value in fragment_background_size.split(",")), fragment_background_size
+    fragment_background_repeat = page.locator(".memory-fragment-image").first.evaluate("el => getComputedStyle(el).backgroundRepeat")
+    assert all(value.strip() == "no-repeat" for value in fragment_background_repeat.split(",")), fragment_background_repeat
+    assert page.locator(".fragment-slot .slot-number").count() == 3
+    assert page.locator(".restore-action").is_disabled()
+    initial_filter = restore_visual.evaluate("el => getComputedStyle(el).filter")
     for index, fragment in enumerate(fragments):
         page.locator(f'[data-memory-fragment="{fragment}"]').click()
         page.locator(f'[data-fragment-slot="{index}"]').click()
+    assert restore_visual.get_attribute("data-repair-progress") == "3"
+    assert restore_visual.evaluate("el => getComputedStyle(el).filter") != initial_filter
+    assert page.locator(".fragment-bank.is-empty").is_visible()
+    assert page.get_by_text("Sequence assembled", exact=True).is_visible()
+    assert page.locator(".restore-action.is-ready").is_enabled()
     if exhibit == "raincoat":
         page.screenshot(path="/tmp/museum-restore.png", full_page=True)
     page.get_by_role("button", name="Restore memory").click()
 
     assert page.locator(".investigation-tools").count() == 0
-    if page.get_by_role("tab", name="Object Memory").count():
-        assert page.get_by_role("tab", name="Object Memory").get_attribute("aria-selected") == "true"
-        page.get_by_role("button", name="Continue to Human Recollection").click()
-        assert page.get_by_role("tab", name="Human Recollection").get_attribute("aria-selected") == "true"
-        if check_perspectives:
-            page.screenshot(path="/tmp/museum-memory-perspective.png", full_page=True)
-        page.get_by_role("button", name="Continue to Restored Truth").click()
-        assert page.get_by_role("tab", name="Restored Truth").get_attribute("aria-selected") == "true"
-    else:
-        assert page.get_by_text("Restore all three opening exhibits to unlock object and human perspective switching.").is_visible()
+    page.wait_for_function("window.MUSEUM_AUDIO_API.status().narrationPlaying")
+    assert page.evaluate("window.MUSEUM_AUDIO_API.status().narrationKey") == f"{exhibit}:object"
+    for label in ("Object Memory", "Human Recollection", "Restored Truth"):
+        assert page.get_by_role("tab", name=label).is_enabled()
+    assert page.get_by_role("tab", name="Object Memory").get_attribute("aria-selected") == "true"
+    page.get_by_role("tab", name="Human Recollection").click()
+    page.wait_for_function(f"window.MUSEUM_AUDIO_API.status().narrationKey === '{exhibit}:human'")
+    assert page.get_by_role("tab", name="Human Recollection").get_attribute("aria-selected") == "true"
+    if check_perspectives:
+        page.screenshot(path="/tmp/museum-memory-perspective.png", full_page=True)
+    page.get_by_role("tab", name="Restored Truth").click()
+    page.wait_for_function(f"window.MUSEUM_AUDIO_API.status().narrationKey === '{exhibit}:restored'")
+    assert page.get_by_role("tab", name="Restored Truth").get_attribute("aria-selected") == "true"
     page.wait_for_function("document.querySelector('[data-claim-clue]') && !document.querySelector('[data-claim-clue]').disabled")
     if exhibit == "raincoat":
         page.screenshot(path="/tmp/museum-truth.png", full_page=True)
     page.get_by_role("button", name="Record restored clue").click()
+    assert not page.evaluate("window.MUSEUM_AUDIO_API.status().narrationPlaying")
+    assert page.locator(".phase-card").count() == 0
+    page.get_by_role("button", name="Return to gallery").click()
     if expected_phase:
         number, name = expected_phase
         phase_card = page.locator(".phase-card")
@@ -97,11 +131,37 @@ def restore_memory(page, exhibit, check_perspectives=False, expected_phase=None)
         assert phase_card.get_by_text(f"Phase {number}", exact=True).is_visible()
         assert phase_card.get_by_role("heading", name=name).is_visible()
         phase_card.wait_for(state="detached", timeout=6000)
-    page.get_by_role("button", name="Return to gallery").click()
 
 
 def main():
-    assert (ROOT / "assets" / "audio" / "backing-track.mp3").stat().st_size > 3_000_000
+    assert (ROOT / "assets" / "music" / "backing-track.mp3").stat().st_size > 3_000_000
+    narration_stems = ("raincoat", "teacup", "umbrella", "button", "music", "guestbook", "orchard")
+    for stem in narration_stems:
+        for perspective in ("object", "human", "restored"):
+            assert (ROOT / "assets" / "audio" / "memories" / f"{stem}-{perspective}.wav").stat().st_size > 300_000
+    cutscene_narration = (
+        "start", "the-curator-remembered", "return-what-was-taken", "burn-the-orchard",
+        "a-beautiful-lie", "the-visitor-who-almost-remembered",
+    )
+    for name in cutscene_narration:
+        assert (ROOT / "assets" / "audio" / "cutscenes" / f"{name}.wav").stat().st_size > 1_000_000
+    cutscene_slide_counts = {
+        "start": 8,
+        "the-curator-remembered": 7,
+        "return-what-was-taken": 7,
+        "burn-the-orchard": 8,
+        "a-beautiful-lie": 6,
+        "the-visitor-who-almost-remembered": 7,
+    }
+    for name, count in cutscene_slide_counts.items():
+        clips = sorted((ROOT / "assets" / "audio" / "cutscenes" / "slides" / name).glob("slide-*.wav"))
+        assert len(clips) == count, (name, len(clips))
+        assert all(clip.stat().st_size > 8_000 for clip in clips)
+    assert (ROOT / "assets" / "audio" / "footsteps" / "stone-floor.wav").stat().st_size > 500_000
+    for name in ("title-wordmark.png", "title-button-enter.png", "title-button-continue.png"):
+        asset = Image.open(ROOT / "assets" / "generated" / name).convert("RGBA")
+        assert asset.getchannel("A").getbbox()
+        assert asset.getpixel((0, 0))[3] == 0
     for character in ("female", "male"):
         frames = (ROOT / "assets" / "characters" / "final" / character).glob("*.png")
         heights = set()
@@ -125,12 +185,32 @@ def main():
         page.evaluate("localStorage.clear(); sessionStorage.clear()")
         page.reload()
 
+        title_wordmark = page.locator("#game-title img")
+        title_wordmark.wait_for(state="visible")
+        assert page.locator(".title-copy > .eyebrow, .title-copy > .title-blurb").count() == 0
+        assert title_wordmark.get_attribute("src") == "assets/generated/title-wordmark.png"
+        assert title_wordmark.get_attribute("alt") == "Museum of Borrowed Memories"
+        page.wait_for_function("document.querySelector('#game-title img').complete && document.querySelector('#game-title img').naturalWidth > 0")
+        title_layout = page.locator(".title-copy").evaluate("el => { const s = getComputedStyle(el); return {position:s.position, align:s.alignItems, justify:s.justifyContent, text:s.textAlign}; }")
+        assert title_layout == {"position": "absolute", "align": "center", "justify": "center", "text": "center"}
+        assert "title-button-enter.png" in page.locator("#begin-button").evaluate("el => getComputedStyle(el).backgroundImage")
+        assert "title-button-continue.png" in page.locator("#continue-button").evaluate("el => getComputedStyle(el).backgroundImage")
+        resting_title_filter = title_wordmark.evaluate("el => getComputedStyle(el).filter")
+        title_wordmark.hover()
+        page.wait_for_timeout(450)
+        glowing_title_filter = title_wordmark.evaluate("el => getComputedStyle(el).filter")
+        assert glowing_title_filter != resting_title_filter
+        assert glowing_title_filter.count("drop-shadow") >= 3
+        page.screenshot(path="/tmp/museum-title-centered.png", full_page=True)
+
         page.wait_for_function("window.MUSEUM_AUDIO_API?.status().musicPlaying", timeout=10000)
         title_audio = page.evaluate("window.MUSEUM_AUDIO_API.status()")
         assert title_audio["musicPlaying"] and title_audio["musicContinuous"], title_audio
         assert title_audio["cueLevel"] > title_audio["musicLevel"], title_audio
         page.get_by_role("button", name="Enter the Museum").click()
         page.wait_for_function("window.MUSEUM_AUDIO_API?.status().unlocked")
+        page.wait_for_function("window.MUSEUM_AUDIO_API?.status().cutsceneNarrationKey === 'start:0'")
+        assert page.evaluate("window.MUSEUM_AUDIO_API.status().cutsceneNarrationPlaying")
         page.wait_for_function("window.MUSEUM_AUDIO_API?.status().musicPlaying", timeout=10000)
         audio = page.evaluate("window.MUSEUM_AUDIO_API.status()")
         assert audio["supported"] and audio["ambienceNodeCount"] == 7, audio
@@ -143,10 +223,12 @@ def main():
         assert page.get_by_role("button", name="Next scene").evaluate("el => getComputedStyle(el).borderRadius") == "50%"
         assert page.locator(".cutscene-copy").evaluate("el => getComputedStyle(el).animationName") == "cutscene-copy-rise"
         page.get_by_role("button", name="Next scene").click()
+        page.wait_for_function("window.MUSEUM_AUDIO_API.status().cutsceneNarrationKey === 'start:1'")
         page.wait_for_function("document.querySelector('.cutscene-copy')?.classList.contains('is-visible')")
         assert page.locator(".cutscene-copy").evaluate("el => getComputedStyle(el).animationName") == "cutscene-copy-rise"
         assert page.locator("[data-cutscene-skip]").get_attribute("class").endswith("is-hidden")
         finish_cutscene(page)
+        assert not page.evaluate("window.MUSEUM_AUDIO_API.status().cutsceneNarrationPlaying")
         page.screenshot(path="/tmp/museum-selection.png", full_page=True)
         assert page.locator('[data-character="female"] strong').inner_text() == "Elara Finch"
         assert page.locator('[data-character="male"] strong').inner_text() == "Silas Hart"
@@ -176,6 +258,11 @@ def main():
         assert page.locator(".hud-actions .icon-button").all_inner_texts() == ["Clues", "Journal", "Menu"]
         assert page.locator('[data-panel="journal"]').get_attribute("data-notification") == "false"
         assert page.locator('[data-panel="case"]').get_attribute("data-notification") == "false"
+        assert page.locator('.exhibit[data-notification="true"]').count() == 3
+        assert page.locator('[data-exhibit="raincoat"]').get_attribute("aria-label").endswith(", unvisited memory")
+        assert page.locator('[data-exhibit="elevator"]').get_attribute("data-notification") == "false"
+        notification_style = page.locator('[data-exhibit="raincoat"]').evaluate("el => { const s = getComputedStyle(el, '::after'); return [s.content, s.borderRadius, s.width]; }")
+        assert notification_style == ['"!"', "50%", "20px"]
         assert "menu.png" in page.locator(".hud-icon-menu").evaluate("el => getComputedStyle(el).backgroundImage")
         assert page.get_by_role("heading", name="Main Gallery").is_visible()
         typography = page.evaluate("""
@@ -249,6 +336,20 @@ def main():
         assert collision_report["allEdgesBlocked"]
         assert collision_report["defaultPositionOpen"]
 
+        depth_report = page.evaluate("""
+            () => ({
+              far: window.MUSEUM_PLAYER_API.scaleAt(44),
+              middle: window.MUSEUM_PLAYER_API.scaleAt(70),
+              near: window.MUSEUM_PLAYER_API.scaleAt(96),
+              current: window.MUSEUM_PLAYER_API.status(),
+              css: Number(document.querySelector('#player').style.getPropertyValue('--player-scale'))
+            })
+        """)
+        assert abs(depth_report["far"] - .66) < .001
+        assert depth_report["far"] < depth_report["middle"] < depth_report["near"]
+        assert abs(depth_report["near"] - 1.03) < .001
+        assert abs(depth_report["current"]["scale"] - depth_report["css"]) < .001
+
         page.keyboard.press("F8")
         assert page.locator("#collision-debug-overlay").is_visible()
         assert page.locator("[data-debug-obstacle]").count() == collision_report["obstacleCount"]
@@ -258,8 +359,12 @@ def main():
 
         page.keyboard.down("ArrowUp")
         page.wait_for_timeout(120)
+        page.wait_for_function("window.MUSEUM_AUDIO_API.status().footstepsPlaying")
+        walking_audio = page.evaluate("window.MUSEUM_AUDIO_API.status()")
+        assert walking_audio["footstepLevel"] > 0
         page.keyboard.up("ArrowUp")
         page.wait_for_timeout(50)
+        page.wait_for_function("!window.MUSEUM_AUDIO_API.status().footstepsPlaying")
         assert page.locator("#player").get_attribute("data-direction") == "back"
         assert "idle-back-" in page.locator("#player-sprite").evaluate("el => getComputedStyle(el).backgroundImage")
         page.keyboard.down("ArrowRight")
@@ -295,6 +400,8 @@ def main():
 
         restore_memory(page, "raincoat", check_perspectives=True)
 
+        assert page.locator('[data-exhibit="raincoat"]').get_attribute("data-notification") == "false"
+        assert page.locator('.exhibit[data-notification="true"]').count() == 2
         assert page.locator('[data-panel="journal"]').get_attribute("data-notification") == "true"
         assert page.locator('[data-panel="case"]').get_attribute("data-notification") == "false"
         page.get_by_role("button", name="Open case board").click()
@@ -341,8 +448,10 @@ def main():
         assert page.locator('[data-panel="journal"]').get_attribute("data-notification") == "false"
         page.get_by_role("tab", name="Memories").click()
         page.get_by_role("button", name="Replay").click()
-        assert page.get_by_role("tab", name="Restored Truth").count() == 0
-        assert page.get_by_text("This memory is stable. Restore the three opening memories to compare perspectives.").is_visible()
+        assert page.get_by_role("tab", name="Object Memory").count() == 1
+        assert page.get_by_role("tab", name="Human Recollection").count() == 1
+        assert page.get_by_role("tab", name="Restored Truth").count() == 1
+        assert page.get_by_text("This memory is stable. Switch perspectives to compare testimony with the object's record.").is_visible()
         assert page.locator(".investigation-tools").count() == 0
         page.get_by_role("button", name="Close panel").click()
 
