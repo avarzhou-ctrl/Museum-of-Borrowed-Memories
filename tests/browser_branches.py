@@ -316,13 +316,14 @@ def main():
         page.locator('[data-fragment-slot="0"]').drag_to(page.locator('[data-fragment-slot="1"]'))
         page.locator('[data-memory-fragment="returns"]').drag_to(page.locator('[data-fragment-slot="0"]'))
         page.get_by_role("button", name="Restore memory").click()
+        page.get_by_role("tab", name="Restored Truth").click()
         page.get_by_role("button", name="Record restored clue").click()
         page.get_by_role("button", name="Return to gallery").click()
         assert page.evaluate("key => JSON.parse(localStorage.getItem(key)).clues.filter(id => id === 'returned-in-storm').length", SAVE_KEY) == 1
         page.locator('[data-exhibit="raincoat"]').evaluate("el => el.click()")
         page.get_by_text("Restored exhibit", exact=True).wait_for()
         page.get_by_role("button", name="Review restored memory").click()
-        assert page.get_by_role("tab", name="Restored Truth").count() == 0
+        assert page.get_by_role("tab", name="Restored Truth").count() == 1
         page.get_by_role("button", name="Close panel").click()
         assert page.evaluate("key => JSON.parse(localStorage.getItem(key)).clues.filter(id => id === 'returned-in-storm').length", SAVE_KEY) == 1
 
